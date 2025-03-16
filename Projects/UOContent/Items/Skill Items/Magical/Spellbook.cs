@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using ModernUO.Serialization;
 using Server.Commands;
-using Server.Engines.Craft;
-using Server.Ethics;
 using Server.Multis;
 using Server.Network;
 using Server.Spells;

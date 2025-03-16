@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using ModernUO.Serialization;
-using Server.Engines.Craft;
-using Server.Ethics;
-using Server.Factions;
 using Server.Network;
 
 namespace Server.Items
@@ -23,8 +20,7 @@ namespace Server.Items
     }
 
     [SerializationGenerator(7, false)]
-    public abstract partial class BaseClothing
-        : Item, IDyable, IScissorable, IFactionItem, ICraftable, IWearableDurability, IAosItem
+    public abstract partial class BaseClothing : Item, IDyable, IWearableDurability, IAosItem
     {
         [SerializableFieldSaveFlag(0)]
         private bool ShouldSerializeResource() => _resource != DefaultResource;
@@ -108,8 +104,6 @@ namespace Server.Items
         // Field 10
         private int _strReq = -1;
 
-        private FactionItem _factionState;
-
         public BaseClothing(int itemID, Layer layer, int hue = 0) : base(itemID)
         {
             Layer = layer;
@@ -184,41 +178,6 @@ namespace Server.Items
         public virtual bool AllowFemaleWearer => true;
         public virtual bool CanBeBlessed => true;
 
-        public virtual int OnCraft(
-            int quality, bool makersMark, Mobile from, CraftSystem craftSystem, Type typeRes,
-            BaseTool tool, CraftItem craftItem, int resHue
-        )
-        {
-            Quality = (ClothingQuality)quality;
-
-            if (makersMark)
-            {
-                Crafter = from.RawName;
-            }
-
-            if (DefaultResource != CraftResource.None)
-            {
-                var resourceType = typeRes ?? craftItem.Resources[0].ItemType;
-
-                Resource = CraftResources.GetFromType(resourceType);
-            }
-            else
-            {
-                Hue = resHue;
-            }
-
-            PlayerConstructed = true;
-
-            var context = craftSystem.GetContext(from);
-
-            if (context?.DoNotColor == true)
-            {
-                Hue = 0;
-            }
-
-            return quality;
-        }
-
         public virtual bool Dye(Mobile from, DyeTub sender)
         {
             if (Deleted)
@@ -234,74 +193,6 @@ namespace Server.Items
             Hue = sender.DyedHue;
 
             return true;
-        }
-
-        public FactionItem FactionItemState
-        {
-            get => _factionState;
-            set
-            {
-                _factionState = value;
-
-                if (_factionState == null)
-                {
-                    Hue = 0;
-                }
-
-                LootType = _factionState == null ? LootType.Regular : LootType.Blessed;
-            }
-        }
-
-        public virtual bool Scissor(Mobile from, Scissors scissors)
-        {
-            if (!IsChildOf(from.Backpack))
-            {
-                from.SendLocalizedMessage(502437); // Items you wish to cut must be in your backpack.
-                return false;
-            }
-
-            if (Ethic.IsImbued(this))
-            {
-                from.SendLocalizedMessage(502440); // Scissors can not be used on that to produce anything.
-                return false;
-            }
-
-            var system = DefTailoring.CraftSystem;
-
-            var item = system.CraftItems.SearchFor(GetType());
-
-            if (item?.Resources.Count == 1)
-            {
-                var resource = item.Resources[0];
-                if (resource.Amount >= 2)
-                {
-                    try
-                    {
-                        var info = CraftResources.GetInfo(_resource);
-
-                        Type resourceType = null;
-                        if (info?.ResourceTypes.Length > 0)
-                        {
-                            resourceType = info.ResourceTypes[0];
-                        }
-
-                        var res = (resourceType ?? resource.ItemType).CreateInstance<Item>();
-
-                        ScissorHelper(from, res, PlayerConstructed ? resource.Amount / 2 : 1);
-
-                        res.LootType = LootType.Regular;
-
-                        return true;
-                    }
-                    catch
-                    {
-                        // ignored
-                    }
-                }
-            }
-
-            from.SendLocalizedMessage(502440); // Scissors can not be used on that to produce anything.
-            return false;
         }
 
         public virtual bool CanFortify => true;
@@ -424,16 +315,8 @@ namespace Server.Items
             this.MarkDirty();
         }
 
-        public override bool AllowSecureTrade(Mobile from, Mobile to, Mobile newOwner, bool accepted) =>
-            Ethic.CheckTrade(from, to, newOwner, this) && base.AllowSecureTrade(from, to, newOwner, accepted);
-
         public override bool CanEquip(Mobile from)
         {
-            if (!Ethic.CheckEquip(from, this))
-            {
-                return false;
-            }
-
             if (from.AccessLevel < AccessLevel.GameMaster)
             {
                 if (RequiredRace != null && from.Race != RequiredRace)
@@ -723,11 +606,6 @@ namespace Server.Items
                 list.Add(1050043, _crafter); // crafted by ~1_NAME~
             }
 
-            if (_factionState != null)
-            {
-                list.Add(1041350); // faction item
-            }
-
             if (_quality == ClothingQuality.Exceptional)
             {
                 list.Add(1060636); // exceptional
@@ -972,11 +850,6 @@ namespace Server.Items
                 {
                     attrs.Add(new EquipInfoAttribute(1049643)); // cursed
                 }
-            }
-
-            if (_factionState != null)
-            {
-                attrs.Add(new EquipInfoAttribute(1041350)); // faction item
             }
 
             if (_quality == ClothingQuality.Exceptional)

@@ -5,7 +5,6 @@ using Server.Gumps;
 using Server.Mobiles;
 using Server.Network;
 using Server.Spells;
-using Server.Spells.Necromancy;
 
 namespace Server.SkillHandlers;
 

@@ -1,5 +1,4 @@
 using Server;
-using Server.Engines.VeteranRewards;
 using Server.Network;
 using Server.Tests;
 using Server.Tests.Network;

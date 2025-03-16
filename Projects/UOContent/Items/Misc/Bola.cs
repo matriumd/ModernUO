@@ -1,7 +1,6 @@
 using System;
 using ModernUO.Serialization;
 using Server.Mobiles;
-using Server.Spells.Ninjitsu;
 using Server.Targeting;
 
 namespace Server.Items;
@@ -39,10 +38,6 @@ public partial class Bola : Item
         {
             from.SendLocalizedMessage(1040016); // You cannot use this while riding a mount
         }
-        else if (AnimalForm.UnderTransformation(from))
-        {
-            from.SendLocalizedMessage(1070902); // You can't use this while in an animal form!
-        }
         else
         {
             EtherealMount.StopMounting(from);
@@ -74,11 +69,7 @@ public partial class Bola : Item
 
         if (to is PlayerMobile mobile)
         {
-            if (AnimalForm.UnderTransformation(mobile))
-            {
-                mobile.SendLocalizedMessage(1114066, from.Name); // ~1_NAME~ knocked you out of animal form!
-            }
-            else if (mobile.Mounted)
+            if (mobile.Mounted)
             {
                 mobile.SendLocalizedMessage(1040023); // You have been knocked off of your mount!
             }
@@ -171,14 +162,6 @@ public partial class Bola : Item
             else if (from.Mounted)
             {
                 from.SendLocalizedMessage(1040016); // You cannot use this while riding a mount
-            }
-            else if (AnimalForm.UnderTransformation(from))
-            {
-                from.SendLocalizedMessage(1070902); // You can't use this while in an animal form!
-            }
-            else if (!to.Mounted && !AnimalForm.UnderTransformation(to))
-            {
-                from.SendLocalizedMessage(1049628); // You have no reason to throw a bola at that.
             }
             else if (!from.CanBeHarmful(to))
             {

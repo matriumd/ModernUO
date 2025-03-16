@@ -1,6 +1,4 @@
 using ModernUO.Serialization;
-using Server.Ethics;
-using Server.Factions;
 using Server.Items;
 
 namespace Server.Mobiles

@@ -1,14 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Server.Engines.ConPVP;
 using Server.Items;
 using Server.Misc;
 using Server.Mobiles;
-using Server.Spells.Bushido;
-using Server.Spells.Necromancy;
-using Server.Spells.Ninjitsu;
-using Server.Spells.Second;
-using Server.Spells.Spellweaving;
 using Server.Targeting;
 
 namespace Server.Spells

@@ -1,6 +1,5 @@
 using ModernUO.Serialization;
 using System;
-using Server.Ethics;
 using Server.Items;
 using Server.Misc;
 

@@ -1,5 +1,4 @@
 using ModernUO.Serialization;
-using Server.Engines.VeteranRewards;
 
 namespace Server.Items
 {

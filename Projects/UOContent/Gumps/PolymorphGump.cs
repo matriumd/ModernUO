@@ -1,7 +1,6 @@
 using System;
 using Server.Network;
 using Server.Spells;
-using Server.Spells.Seventh;
 
 namespace Server.Gumps
 {

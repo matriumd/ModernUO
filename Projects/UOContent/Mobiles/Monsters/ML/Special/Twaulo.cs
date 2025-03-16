@@ -1,6 +1,5 @@
 using ModernUO.Serialization;
 using System;
-using Server.Engines.CannedEvil;
 using Server.Items;
 
 namespace Server.Mobiles

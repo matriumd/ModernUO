@@ -1,14 +1,6 @@
 using System;
 using Server.Items;
 using Server.Spells;
-using Server.Spells.Fifth;
-using Server.Spells.First;
-using Server.Spells.Fourth;
-using Server.Spells.Necromancy;
-using Server.Spells.Second;
-using Server.Spells.Seventh;
-using Server.Spells.Sixth;
-using Server.Spells.Third;
 using Server.Targeting;
 
 namespace Server.Mobiles;

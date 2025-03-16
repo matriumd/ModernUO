@@ -1,11 +1,8 @@
 using System;
 using System.Runtime.CompilerServices;
-using Server.Engines.ConPVP;
-using Server.Factions;
 using Server.Gumps;
 using Server.Menus.Questions;
 using Server.Mobiles;
-using Server.Multis;
 using Server.Network;
 using Server.Regions;
 
@@ -291,19 +288,9 @@ public sealed class HelpGump : DynamicGump
                 }
             case 2: // Stuck
                 {
-                    var house = BaseHouse.FindHouseAt(from);
-
-                    if (house?.IsAosRules == true && !from.Region.IsPartOf<SafeZone>()) // Dueling
-                    {
-                        from.Location = house.BanLocation;
-                    }
-                    else if (from.Region.IsPartOf<JailRegion>())
+                    if (from.Region.IsPartOf<JailRegion>())
                     {
                         from.SendLocalizedMessage(1114345, "", 0x35); // You'll need a better jailbreak plan than that!
-                    }
-                    else if (Sigil.ExistsOn(from))
-                    {
-                        from.SendLocalizedMessage(1061632); // You can't do that while carrying the sigil.
                     }
                     else if (from is PlayerMobile mobile && mobile.CanUseStuckMenu() &&
                              mobile.Region.CanUseStuckMenu(mobile) && !CheckCombat(mobile) && !mobile.Frozen &&

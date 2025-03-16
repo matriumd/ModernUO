@@ -1,9 +1,6 @@
 using System;
 using ModernUO.Serialization;
-using Server.Engines.CannedEvil;
 using Server.Items;
-using Server.Spells.Fifth;
-using Server.Spells.Seventh;
 
 namespace Server.Mobiles;
 

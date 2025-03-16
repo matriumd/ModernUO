@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Server.Accounting;
 using Server.Engines.Help;
-using Server.Factions;
 using Server.Gumps;
 using Server.Items;
 using Server.Mobiles;
@@ -61,9 +60,6 @@ namespace Server.Commands.Generic
             Register(new InterfaceCommand());
             Register(new RefreshHouseCommand());
             Register(new ConditionCommand());
-            Register(new FactionKickCommand(FactionKickType.Kick));
-            Register(new FactionKickCommand(FactionKickType.Ban));
-            Register(new FactionKickCommand(FactionKickType.Unban));
             Register(new BringToPackCommand());
             Register(new TraceLockdownCommand());
             Register(new LocationCommand());

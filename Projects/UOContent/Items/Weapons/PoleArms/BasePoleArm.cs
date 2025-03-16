@@ -2,8 +2,6 @@ using System;
 using ModernUO.Serialization;
 using Server.Collections;
 using Server.ContextMenus;
-using Server.Engines.ConPVP;
-using Server.Engines.Harvest;
 
 namespace Server.Items
 {

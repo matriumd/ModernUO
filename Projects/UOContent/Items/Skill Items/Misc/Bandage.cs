@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using ModernUO.Serialization;
-using Server.Engines.ConPVP;
-using Server.Factions;
 using Server.Gumps;
 using Server.Mobiles;
 using Server.Targeting;

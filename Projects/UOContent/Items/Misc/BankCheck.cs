@@ -1,11 +1,8 @@
 using System;
 using ModernUO.Serialization;
 using Server.Accounting;
-using Server.Engines.Quests.Haven;
-using Server.Engines.Quests.Necro;
 using Server.Mobiles;
 using Server.Network;
-using CashBankCheckObjective = Server.Engines.Quests.Necro.CashBankCheckObjective;
 
 namespace Server.Items;
 
@@ -175,31 +172,6 @@ public partial class BankCheck : Item
         {
             // Gold was deposited in your account:
             from.SendLocalizedMessage(1042672, true, $"{deposited:N0}");
-
-            if (from is PlayerMobile pm)
-            {
-                var qs = pm.Quest;
-
-                if (qs is DarkTidesQuest)
-                {
-                    var obj = qs.FindObjective<CashBankCheckObjective>();
-
-                    if (obj?.Completed == false)
-                    {
-                        obj.Complete();
-                    }
-                }
-
-                if (qs is UzeraanTurmoilQuest)
-                {
-                    var obj = qs.FindObjective(typeof(Engines.Quests.Haven.CashBankCheckObjective));
-
-                    if (obj?.Completed == false)
-                    {
-                        obj.Complete();
-                    }
-                }
-            }
         }
     }
 }

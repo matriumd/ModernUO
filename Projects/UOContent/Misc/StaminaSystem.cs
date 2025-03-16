@@ -6,7 +6,6 @@ using ModernUO.CodeGeneratedEvents;
 using Server.Collections;
 using Server.Logging;
 using Server.Mobiles;
-using Server.Spells.Ninjitsu;
 
 namespace Server.Misc;
 

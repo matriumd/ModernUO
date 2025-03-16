@@ -5,19 +5,10 @@ using Server.Accounting;
 using Server.Collections;
 using Server.ContextMenus;
 using Server.Engines.BuffIcons;
-using Server.Engines.BulkOrders;
-using Server.Engines.CannedEvil;
-using Server.Engines.ConPVP;
-using Server.Engines.Craft;
 using Server.Engines.Help;
-using Server.Engines.MLQuests;
-using Server.Engines.MLQuests.Gumps;
 using Server.Engines.PartySystem;
 using Server.Engines.PlayerMurderSystem;
 using Server.Engines.Quests;
-using Server.Engines.Virtues;
-using Server.Ethics;
-using Server.Factions;
 using Server.Guilds;
 using Server.Gumps;
 using Server.Items;
@@ -28,17 +19,8 @@ using Server.Network;
 using Server.Regions;
 using Server.SkillHandlers;
 using Server.Spells;
-using Server.Spells.Bushido;
-using Server.Spells.Fourth;
-using Server.Spells.Necromancy;
-using Server.Spells.Ninjitsu;
-using Server.Spells.Sixth;
-using Server.Spells.Spellweaving;
 using Server.Targeting;
-using BaseQuestGump = Server.Engines.MLQuests.Gumps.BaseQuestGump;
 using CalcMoves = Server.Movement.Movement;
-using QuestOfferGump = Server.Engines.MLQuests.Gumps.QuestOfferGump;
-using RankDefinition = Server.Guilds.RankDefinition;
 
 namespace Server.Mobiles
 {
@@ -94,7 +76,7 @@ namespace Server.Mobiles
         DismountRecovery = 1070859 // You cannot mount while recovering from a dismount special maneuver.
     }
 
-    public partial class PlayerMobile : Mobile, IHonorTarget, IHasSteps
+    public partial class PlayerMobile : Mobile, IHasSteps
     {
         private static bool m_NoRecursion;
 
@@ -151,8 +133,6 @@ namespace Server.Mobiles
         // TODO: Pool BuffInfo objects
         private Dictionary<BuffIcon, BuffInfo> m_BuffTable;
 
-        private DuelPlayer m_DuelPlayer;
-
         private Type m_EnemyOfOneType;
         private TimeSpan m_GameTime;
 
@@ -160,8 +140,6 @@ namespace Server.Mobiles
          * a value of zero means, that the mobile is not executing the spell. Otherwise,
          * the value should match the BaseMana required
         */
-
-        private RankDefinition m_GuildRank;
 
         private int m_HairModID = -1, m_HairModHue;
 
@@ -179,8 +157,6 @@ namespace Server.Mobiles
         private DateTime m_LastYoungMessage = DateTime.MinValue;
 
         private MountBlock _mountBlock;
-
-        private DateTime m_NextJustAward;
 
         private int m_NextProtectionCheck = 10;
         private DateTime m_NextSmithBulkOrder;
@@ -202,10 +178,7 @@ namespace Server.Mobiles
             VisibilityList = new List<Mobile>();
             PermaFlags = new List<Mobile>();
 
-            BOBFilter = new BOBFilter();
-
             m_GameTime = TimeSpan.Zero;
-            m_GuildRank = RankDefinition.Lowest;
         }
 
         public PlayerMobile(Serial s) : base(s)
@@ -331,8 +304,6 @@ namespace Server.Mobiles
 
         public override int Luck => AosAttributes.GetValue(this, AosAttribute.Luck);
 
-        public BOBFilter BOBFilter { get; private set; }
-
         [CommandProperty(AccessLevel.GameMaster)]
         public DateTime SessionStart { get; private set; }
 
@@ -349,8 +320,6 @@ namespace Server.Mobiles
                 return m_GameTime;
             }
         }
-
-        public override bool NewGuildDisplay => Guilds.Guild.NewGuildSystem;
 
         public bool BedrollLogout { get; set; }
 
@@ -373,11 +342,6 @@ namespace Server.Mobiles
             }
         }
 
-        [CommandProperty(AccessLevel.GameMaster)]
-        public Player EthicPlayer { get; set; }
-
-        public PlayerState FactionPlayerState { get; set; }
-
         // WARNING - This can be null!!
         public HashSet<Mobile> Stabled { get; private set; }
 
@@ -388,12 +352,6 @@ namespace Server.Mobiles
 
         // WARNING - This can be null!!
         public HashSet<Mobile> AllFollowers => _allFollowers;
-
-        public RankDefinition GuildRank
-        {
-            get => AccessLevel >= AccessLevel.GameMaster ? RankDefinition.Leader : m_GuildRank;
-            set => m_GuildRank = value;
-        }
 
         [CommandProperty(AccessLevel.GameMaster)]
         public int GuildMessageHue { get; set; }
@@ -555,12 +513,6 @@ namespace Server.Mobiles
                     {
                         strOffs = 25;
                     }
-
-                    if (AnimalForm.UnderTransformation(this, typeof(BakeKitsune)) ||
-                        AnimalForm.UnderTransformation(this, typeof(GreyWolf)))
-                    {
-                        strOffs += 20;
-                    }
                 }
                 else
                 {
@@ -623,28 +575,6 @@ namespace Server.Mobiles
             set => base.Dex = value;
         }
 
-        public DuelContext DuelContext { get; private set; }
-
-        public DuelPlayer DuelPlayer
-        {
-            get => m_DuelPlayer;
-            set
-            {
-                var wasInTourney = DuelContext?.Finished == false && DuelContext.m_Tournament != null;
-
-                m_DuelPlayer = value;
-
-                DuelContext = m_DuelPlayer?.Participant.Context;
-
-                var isInTourney = DuelContext?.Finished == false && DuelContext.m_Tournament != null;
-
-                if (wasInTourney != isInTourney)
-                {
-                    SendEverything();
-                }
-            }
-        }
-
         public QuestSystem Quest { get; set; }
 
         public List<QuestRestartInfo> DoneQuests { get; set; }
@@ -673,8 +603,6 @@ namespace Server.Mobiles
 
         public bool WaitingForEnemy { get; set; }
 
-        public HonorContext SentHonorContext { get; set; }
-
         [CommandProperty(AccessLevel.GameMaster)]
         public bool Young
         {
@@ -694,9 +622,6 @@ namespace Server.Mobiles
             get => GetFlag(PlayerFlag.DisplayChampionTitle);
             set => SetFlag(PlayerFlag.DisplayChampionTitle, value);
         }
-
-        [CommandProperty(AccessLevel.GameMaster, canModify: true)]
-        public ChampionTitleContext ChampionTitles => ChampionTitleSystem.GetOrCreateChampionTitleContext(this);
 
         [CommandProperty(AccessLevel.GameMaster)]
         public int ShortTermMurders
@@ -720,11 +645,6 @@ namespace Server.Mobiles
         [CommandProperty(AccessLevel.GameMaster)]
         public int KnownRecipes => _acquiredRecipes?.Count ?? 0;
 
-        [CommandProperty(AccessLevel.Counselor, canModify: true)]
-        public VirtueContext Virtues => VirtueSystem.GetOrCreateVirtues(this);
-
-        public HonorContext ReceivedHonorContext { get; set; }
-
         public QuestArrow QuestArrow
         {
             get => m_QuestArrow;
@@ -740,81 +660,6 @@ namespace Server.Mobiles
         }
 
         public void ClearQuestArrow() => m_QuestArrow = null;
-
-        public override void ToggleFlying()
-        {
-            if (Race != Race.Gargoyle)
-            {
-                return;
-            }
-
-            if (Flying)
-            {
-                Freeze(TimeSpan.FromSeconds(1));
-                Animate(61, 10, 1, true, false, 0);
-                Flying = false;
-                RemoveBuff(BuffIcon.Fly);
-                SendMessage("You have landed.");
-
-                BaseMount.Dismount(this);
-                return;
-            }
-
-            var type = MountBlockReason;
-
-            if (!Alive)
-            {
-                SendLocalizedMessage(1113082); // You may not fly while dead.
-            }
-            else if (IsBodyMod && !(BodyMod == 666 || BodyMod == 667))
-            {
-                SendLocalizedMessage(1112453); // You can't fly in your current form!
-            }
-            else if (type != BlockMountType.None)
-            {
-                switch (type)
-                {
-                    case BlockMountType.Dazed:
-                        {
-                            SendLocalizedMessage(1112457); // You are still too dazed to fly.
-                            break;
-                        }
-                    case BlockMountType.BolaRecovery:
-                        {
-                            SendLocalizedMessage(1112455); // You cannot fly while recovering from a bola throw.
-                            break;
-                        }
-                    case BlockMountType.DismountRecovery:
-                        {
-                            // You cannot fly while recovering from a dismount maneuver.
-                            SendLocalizedMessage(1112456);
-                            break;
-                        }
-                }
-            }
-            else if (Hits < 25) // TODO confirm
-            {
-                SendLocalizedMessage(1112454); // You must heal before flying.
-            }
-            else
-            {
-                if (!Flying)
-                {
-                    // No message?
-                    if (Spell is FlySpell spell)
-                    {
-                        spell.Stop();
-                    }
-
-                    new FlySpell(this).Cast();
-                }
-                else
-                {
-                    Flying = false;
-                    RemoveBuff(BuffIcon.Fly);
-                }
-            }
-        }
 
         public static Direction GetDirection4(Point3D from, Point3D to)
         {
@@ -860,58 +705,6 @@ namespace Server.Mobiles
                     if (m.Z >= location.Z && m.Z < location.Z + 16 && (!m.Hidden || m.AccessLevel == AccessLevel.Player))
                     {
                         return false;
-                    }
-                }
-            }
-
-            var bi = item.GetBounce();
-
-            if (bi == null)
-            {
-                return true;
-            }
-
-            var type = item.GetType();
-
-            if (type.IsDefined(typeof(FurnitureAttribute), true) ||
-                type.IsDefined(typeof(DynamicFlippingAttribute), true))
-            {
-                var objs = type.GetCustomAttributes(typeof(FlippableAttribute), true);
-
-                if (objs.Length > 0)
-                {
-                    if (objs[0] is FlippableAttribute fp)
-                    {
-                        var itemIDs = fp.ItemIDs;
-
-                        var oldWorldLoc = bi.WorldLoc;
-                        var newWorldLoc = location;
-
-                        if (oldWorldLoc.X != newWorldLoc.X || oldWorldLoc.Y != newWorldLoc.Y)
-                        {
-                            var dir = GetDirection4(oldWorldLoc, newWorldLoc);
-
-                            item.ItemID = itemIDs.Length switch
-                            {
-                                2 => dir switch
-                                {
-                                    Direction.North => itemIDs[0],
-                                    Direction.South => itemIDs[0],
-                                    Direction.East => itemIDs[1],
-                                    Direction.West => itemIDs[1],
-                                    _ => item.ItemID
-                                },
-                                4 => dir switch
-                                {
-                                    Direction.South => itemIDs[0],
-                                    Direction.East => itemIDs[1],
-                                    Direction.North => itemIDs[2],
-                                    Direction.West => itemIDs[3],
-                                    _ => item.ItemID
-                                },
-                                _ => item.ItemID
-                            };
-                        }
                     }
                 }
             }
@@ -1078,16 +871,9 @@ namespace Server.Mobiles
 
         public void SetMountBlock(BlockMountType type, TimeSpan duration, bool dismount)
         {
-            if (dismount)
+            if (dismount && Mount != null)
             {
-                if (Mount != null)
-                {
-                    Mount.Rider = null;
-                }
-                else if (AnimalForm.UnderTransformation(this))
-                {
-                    AnimalForm.RemoveContext(this);
-                }
+                Mount.Rider = null;
             }
 
             if (_mountBlock == null || !_mountBlock.CheckBlock() || _mountBlock.Expiration < Core.Now + duration)
@@ -1114,7 +900,7 @@ namespace Server.Mobiles
 
             var max = base.GetMaxResistance(type);
 
-            if (type != ResistanceType.Physical && CurseSpell.UnderEffect(this))
+            if (type != ResistanceType.Physical)
             {
                 max -= 10;
             }
@@ -1262,9 +1048,7 @@ namespace Server.Mobiles
                 return;
             }
 
-            VirtueSystem.CheckAtrophies(from);
             from.ClaimAutoStabledPets();
-            AnimalForm.GetContext(from)?.Timer.Start();
             from.ResendBuffs();
         }
 
@@ -1315,11 +1099,7 @@ namespace Server.Mobiles
                 var dex = Dex;
                 var intel = Int;
 
-                var factionItemCount = 0;
-
                 Mobile from = this;
-
-                var ethic = Ethic.Find(from);
 
                 for (var i = items.Count - 1; i >= 0; --i)
                 {
@@ -1329,14 +1109,6 @@ namespace Server.Mobiles
                     }
 
                     var item = items[i];
-                    var itemEthic = Ethic.Find(item);
-
-                    if (itemEthic != null && itemEthic != ethic)
-                    {
-                        from.AddToBackpack(item);
-                        moved = true;
-                        continue;
-                    }
 
                     if (item is BaseWeapon weapon)
                     {
@@ -1456,30 +1228,6 @@ namespace Server.Mobiles
                             moved = true;
                         }
                     }
-
-                    var factionItem = FactionItem.Find(item);
-
-                    if (factionItem != null)
-                    {
-                        var drop = false;
-
-                        var ourFaction = Faction.Find(this);
-
-                        if (ourFaction == null || ourFaction != factionItem.Faction)
-                        {
-                            drop = true;
-                        }
-                        else if (++factionItemCount > FactionItem.GetMaxWearables(this))
-                        {
-                            drop = true;
-                        }
-
-                        if (drop)
-                        {
-                            from.AddToBackpack(item);
-                            moved = true;
-                        }
-                    }
                 }
 
                 if (moved)
@@ -1581,8 +1329,6 @@ namespace Server.Mobiles
             {
                 return;
             }
-
-            InvisibilitySpell.StopTimer(this);
 
             base.RevealingAction();
 
@@ -1754,33 +1500,6 @@ namespace Server.Mobiles
             return newX >= startX && newY >= startY && newX < endX && newY < endY && Map == foundation.Map;
         }
 
-        public override bool AllowItemUse(Item item)
-        {
-            if (DuelContext?.AllowItemUse(this, item) == false)
-            {
-                return false;
-            }
-
-            return DesignContext.Check(this);
-        }
-
-        public override bool AllowSkillUse(SkillName skill)
-        {
-            if (AnimalForm.UnderTransformation(this))
-            {
-                for (var i = 0; i < AnimalFormRestrictedSkills.Length; i++)
-                {
-                    if (AnimalFormRestrictedSkills[i] == skill)
-                    {
-                        SendLocalizedMessage(1070771); // You cannot use that skill in this form.
-                        return false;
-                    }
-                }
-            }
-
-            return DuelContext?.AllowSkillUse(this, skill) != false && DesignContext.Check(this);
-        }
-
         public virtual void RecheckTownProtection()
         {
             m_NextProtectionCheck = 10;
@@ -1869,11 +1588,6 @@ namespace Server.Mobiles
                             }
                         }
                     }
-
-                    if (MLQuestSystem.Enabled)
-                    {
-                        list.Add(new CallbackEntry(6169, ToggleQuestItem)); // Toggle Quest Item
-                    }
                 }
 
                 var house = BaseHouse.FindHouseAt(this);
@@ -1884,16 +1598,6 @@ namespace Server.Mobiles
                     {
                         list.Add(new CallbackEntry(6204, GetVendor));
                     }
-
-                    if (house.IsAosRules && !Region.IsPartOf<SafeZone>()) // Dueling
-                    {
-                        list.Add(new CallbackEntry(6207, LeaveHouse));
-                    }
-                }
-
-                if (JusticeVirtue.IsProtected(this))
-                {
-                    list.Add(new CallbackEntry(6157, CancelProtection));
                 }
 
                 if (Alive)
@@ -1951,20 +1655,6 @@ namespace Server.Mobiles
             }
         }
 
-        private void CancelProtection()
-        {
-            if (JusticeVirtue.CancelProtection(this, out var prot))
-            {
-                var args = $"{Name}\t{prot.Name}";
-
-                // The protective relationship between ~1_PLAYER1~ and ~2_PLAYER2~ has been ended.
-                prot.SendLocalizedMessage(1049371, args);
-
-                // The protective relationship between ~1_PLAYER1~ and ~2_PLAYER2~ has been ended.
-                SendLocalizedMessage(1049371, args);
-            }
-        }
-
         private void ToggleTrades()
         {
             RefuseTrades = !RefuseTrades;
@@ -1974,7 +1664,7 @@ namespace Server.Mobiles
         {
             var house = BaseHouse.FindHouseAt(this);
 
-            if (CheckAlive() && house?.IsOwner(this) == true && house.InternalizedVendors.Count > 0 && NetState is NetState { } ns)
+            if (CheckAlive() && house?.IsOwner(this) == true && house.InternalizedVendors.Count > 0 && NetState is { } ns)
             {
                 ns.SendGump(new ReclaimVendorGump(house));
             }
@@ -2028,46 +1718,6 @@ namespace Server.Mobiles
             if (!base.CheckEquip(item))
             {
                 return false;
-            }
-
-            if (DuelContext?.AllowItemEquip(this, item) == false)
-            {
-                return false;
-            }
-
-            var factionItem = FactionItem.Find(item);
-
-            if (factionItem != null)
-            {
-                var faction = Faction.Find(this);
-
-                if (faction == null)
-                {
-                    SendLocalizedMessage(1010371); // You cannot equip a faction item!
-                    return false;
-                }
-
-                if (faction != factionItem.Faction)
-                {
-                    SendLocalizedMessage(1010372); // You cannot equip an opposing faction's item!
-                    return false;
-                }
-
-                var maxWearables = FactionItem.GetMaxWearables(this);
-
-                for (var i = 0; i < Items.Count; ++i)
-                {
-                    var equipped = Items[i];
-
-                    if (item != equipped && FactionItem.Find(equipped) != null)
-                    {
-                        if (--maxWearables == 0)
-                        {
-                            SendLocalizedMessage(1010373); // You do not have enough rank to equip more faction items!
-                            return false;
-                        }
-                    }
-                }
             }
 
             if (AccessLevel < AccessLevel.GameMaster && item.Layer != Layer.Mount && HasTrade)
@@ -2228,8 +1878,6 @@ namespace Server.Mobiles
         {
             CheckLightLevels(false);
 
-            DuelContext?.OnLocationChanged(this);
-
             var context = DesignContext;
 
             if (context == null || m_NoRecursion)
@@ -2270,23 +1918,13 @@ namespace Server.Mobiles
             m is BaseCreature creature && !creature.Controlled
                 ? !Alive || !creature.Alive || IsDeadBondedPet || creature.IsDeadBondedPet ||
                   Hidden && AccessLevel > AccessLevel.Player
-                : Region.IsPartOf<SafeZone>() && m is PlayerMobile pm &&
-                (pm.DuelContext == null || pm.DuelPlayer == null || !pm.DuelContext.Started || pm.DuelContext.Finished ||
-                 pm.DuelPlayer.Eliminated) || base.OnMoveOver(m);
+                : base.OnMoveOver(m);
 
         public override bool CheckShove(Mobile shoved) =>
-            IgnoreMobiles || shoved.IgnoreMobiles || TransformationSpellHelper.UnderTransformation(shoved, typeof(WraithFormSpell)) ||
-            base.CheckShove(shoved);
+            IgnoreMobiles || shoved.IgnoreMobiles || base.CheckShove(shoved);
 
         protected override void OnMapChange(Map oldMap)
         {
-            if (Map != Faction.Facet && oldMap == Faction.Facet || Map == Faction.Facet && oldMap != Faction.Facet)
-            {
-                InvalidateProperties();
-            }
-
-            DuelContext?.OnMapChanged(this);
-
             var context = DesignContext;
 
             if (context == null || m_NoRecursion)
@@ -2304,13 +1942,6 @@ namespace Server.Mobiles
             }
 
             m_NoRecursion = false;
-        }
-
-        public override void OnBeneficialAction(Mobile target, bool isCriminal)
-        {
-            SentHonorContext?.OnSourceBeneficialAction(target);
-
-            base.OnBeneficialAction(target, isCriminal);
         }
 
         public override void OnDamage(int amount, Mobile from, bool willKill)
@@ -2337,12 +1968,7 @@ namespace Server.Mobiles
                 c?.Slip();
             }
 
-            Confidence.StopRegenerating(this);
-
             StaminaSystem.FatigueOnDamage(this, amount);
-
-            ReceivedHonorContext?.OnTargetDamaged(from, amount);
-            SentHonorContext?.OnSourceDamaged(from, amount);
 
             if (willKill && from is PlayerMobile mobile)
             {
@@ -2424,9 +2050,6 @@ namespace Server.Mobiles
                 mobile.m_InsuranceBonus = 0;
             }
 
-            ReceivedHonorContext?.OnTargetKilled();
-            SentHonorContext?.OnSourceKilled();
-
             RecoverAmmo();
 
             return base.OnBeforeDeath();
@@ -2437,12 +2060,6 @@ namespace Server.Mobiles
             if (!InsuranceEnabled || !item.Insured)
             {
                 return false;
-            }
-
-            if (DuelContext?.Registered == true && DuelContext.Started &&
-                m_DuelPlayer?.Eliminated != true)
-            {
-                return true;
             }
 
             if (AutoRenewInsurance)
@@ -2568,44 +2185,6 @@ namespace Server.Mobiles
                 }
             }
 
-            if (Kills >= 5 && Core.Now >= m_NextJustAward)
-            {
-                var m = FindMostRecentDamager(false);
-
-                if (m is BaseCreature bc)
-                {
-                    m = bc.GetMaster();
-                }
-
-                if (m != this && m is PlayerMobile pm)
-                {
-                    var gainedPath = false;
-
-                    var pointsToGain = 0;
-
-                    pointsToGain += (int)Math.Sqrt(GameTime.TotalSeconds * 4);
-                    pointsToGain *= 5;
-                    pointsToGain += (int)Math.Pow(Skills.Total / 250.0, 2);
-
-                    if (VirtueSystem.Award(pm, VirtueName.Justice, pointsToGain, ref gainedPath))
-                    {
-                        if (gainedPath)
-                        {
-                            m.SendLocalizedMessage(1049367); // You have gained a path in Justice!
-                        }
-                        else
-                        {
-                            m.SendLocalizedMessage(1049363); // You have gained in Justice.
-                        }
-
-                        m.FixedParticles(0x375A, 9, 20, 5027, EffectLayer.Waist);
-                        m.PlaySound(0x1F7);
-
-                        m_NextJustAward = Core.Now + TimeSpan.FromMinutes(pointsToGain / 3.0);
-                    }
-                }
-            }
-
             if (m_InsuranceAward is PlayerMobile insurancePm && insurancePm.m_InsuranceBonus > 0)
             {
                 // ~1_AMOUNT~ gold has been deposited into your bank box.
@@ -2622,18 +2201,6 @@ namespace Server.Mobiles
                     killer = master;
                 }
             }
-
-            if (Young && DuelContext == null && YoungDeathTeleport())
-            {
-                Timer.StartTimer(TimeSpan.FromSeconds(2.5), SendYoungDeathNotice);
-            }
-
-            if (DuelContext?.Registered != true || !DuelContext.Started || m_DuelPlayer?.Eliminated != false)
-            {
-                Faction.HandleDeath(this, killer);
-            }
-
-            Guilds.Guild.HandleDeath(this, killer);
 
             if (m_BuffTable != null)
             {
@@ -2684,43 +2251,6 @@ namespace Server.Mobiles
             return base.MutateSpeech(hears, ref text, ref context);
         }
 
-        public override void DoSpeech(string text, int[] keywords, MessageType type, int hue)
-        {
-            if (Guilds.Guild.NewGuildSystem && type is MessageType.Guild or MessageType.Alliance)
-            {
-                if (Guild is not Guild g)
-                {
-                    SendLocalizedMessage(1063142); // You are not in a guild!
-                }
-                else if (type == MessageType.Alliance)
-                {
-                    if (g.Alliance?.IsMember(g) == true)
-                    {
-                        // g.Alliance.AllianceTextMessage( hue, "[Alliance][{0}]: {1}", this.Name, text );
-                        g.Alliance.AllianceChat(this, text);
-                        SendToStaffMessage(this, $"[Alliance]: {text}");
-
-                        AllianceMessageHue = hue;
-                    }
-                    else
-                    {
-                        SendLocalizedMessage(1071020); // You are not in an alliance!
-                    }
-                }
-                else // Type == MessageType.Guild
-                {
-                    GuildMessageHue = hue;
-
-                    g.GuildChat(this, text);
-                    SendToStaffMessage(this, $"[Guild]: {text}");
-                }
-            }
-            else
-            {
-                base.DoSpeech(text, keywords, type, hue);
-            }
-        }
-
         private static void SendToStaffMessage(Mobile from, string text)
         {
             Span<byte> buffer = stackalloc byte[OutgoingMessagePackets.GetMaxMessageLength(text)].InitializePacket();
@@ -2751,48 +2281,6 @@ namespace Server.Mobiles
 
                     ns.Send(buffer);
                 }
-            }
-        }
-
-        public override void Damage(int amount, Mobile from = null, bool informMount = true, bool ignoreEvilOmen = false)
-        {
-            var damageBonus = 1.0;
-
-            if (EvilOmenSpell.EndEffect(this) && !ignoreEvilOmen)
-            {
-                damageBonus += 0.25;
-            }
-
-            var hasBloodOath = false;
-
-            if (from != null)
-            {
-                if (Talisman is BaseTalisman talisman &&
-                    talisman.Protection?.Type?.IsInstanceOfType(from) == true)
-                {
-                    damageBonus -= talisman.Protection.Amount / 100.0;
-                }
-
-                // Is the attacker attacking the blood oath caster?
-                if (BloodOathSpell.GetBloodOath(from) == this)
-                {
-                    hasBloodOath = true;
-                    damageBonus += 0.2;
-                }
-            }
-
-            base.Damage((int)(amount * damageBonus), from, informMount);
-
-            // If the blood oath caster will die then damage is not reflected back to the attacker
-            if (hasBloodOath && Alive && !Deleted && !IsDeadBondedPet)
-            {
-                // In some expansions resisting spells reduces reflect dmg from monster blood oath
-                var resistReflectedDamage = !from.Player && Core.ML && !Core.HS
-                    ? (from.Skills.MagicResist.Value * 0.5 + 10) / 100
-                    : 0;
-
-                // Reflect damage to the attacker
-                from.Damage((int)(amount * (1.0 - resistReflectedDamage)), this);
             }
         }
 
@@ -2832,8 +2320,6 @@ namespace Server.Mobiles
         {
             base.Deserialize(reader);
             var version = reader.ReadInt();
-
-            VirtueContext virtues = version < 32 ? Virtues : null;
 
             switch (version)
             {
@@ -2912,20 +2398,10 @@ namespace Server.Mobiles
                     }
                 case 23:
                     {
-                        if (version < 33)
-                        {
-                            ChampionTitles.Deserialize(reader);
-                        }
-
                         goto case 22;
                     }
                 case 22:
                     {
-                        if (version < 32)
-                        {
-                            virtues.LastValorLoss = reader.ReadDateTime();
-                        }
-
                         goto case 21;
                     }
                 case 21:
@@ -2943,14 +2419,6 @@ namespace Server.Mobiles
                     }
                 case 19:
                     {
-                        var rank = reader.ReadEncodedInt();
-                        var maxRank = RankDefinition.Ranks.Length - 1;
-                        if (rank > maxRank)
-                        {
-                            rank = maxRank;
-                        }
-
-                        m_GuildRank = RankDefinition.Ranks[rank];
                         LastOnline = reader.ReadDateTime();
                         goto case 18;
                     }
@@ -2999,30 +2467,15 @@ namespace Server.Mobiles
                     }
                 case 15:
                     {
-                        if (version < 32)
-                        {
-                            virtues.LastCompassionLoss = reader.ReadDeltaTime();
-                        }
                         goto case 14;
                     }
                 case 14:
                     {
-                        if (version < 32)
-                        {
-                            virtues.CompassionGains = reader.ReadEncodedInt();
-                            if (virtues.CompassionGains > 0)
-                            {
-                                virtues.NextCompassionDay = reader.ReadDeltaTime();
-                            }
-                        }
-
                         goto case 13;
                     }
                 case 13: // just removed m_PaidInsurance list
                 case 12:
                     {
-                        BOBFilter = new BOBFilter();
-                        BOBFilter.Deserialize(reader);
                         goto case 11;
                     }
                 case 11:
@@ -3087,31 +2540,10 @@ namespace Server.Mobiles
                     }
                 case 4:
                     {
-                        if (version < 32)
-                        {
-                            virtues.LastJusticeLoss = reader.ReadDeltaTime();
-                            var protectors = reader.ReadEntityList<PlayerMobile>(); // Always a list of 0, or 1
-                            if (protectors.Count > 0)
-                            {
-                                var protector = protectors[0];
-                                if (protector != null)
-                                {
-                                    JusticeVirtue.AddProtection(protector, this);
-                                }
-                            }
-                        }
-
                         goto case 3;
                     }
                 case 3:
                     {
-                        if (version < 32)
-                        {
-                            virtues.LastSacrificeGain = reader.ReadDeltaTime();
-                            virtues.LastSacrificeLoss = reader.ReadDeltaTime();
-                            virtues.AvailableResurrects = reader.ReadInt();
-                        }
-
                         goto case 2;
                     }
                 case 2:
@@ -3144,10 +2576,6 @@ namespace Server.Mobiles
             }
 
             PermaFlags ??= new List<Mobile>();
-            BOBFilter ??= new BOBFilter();
-
-            // Default to member if going from older version to new version (only time it should be null)
-            m_GuildRank ??= RankDefinition.Member;
 
             if (LastOnline == DateTime.MinValue && Account != null)
             {
@@ -3241,7 +2669,6 @@ namespace Server.Mobiles
             writer.WriteEncodedInt(AllianceMessageHue);
             writer.WriteEncodedInt(GuildMessageHue);
 
-            writer.WriteEncodedInt(m_GuildRank.Rank);
             writer.Write(LastOnline);
 
             writer.WriteEncodedInt((int)SolenFriendship);
@@ -3266,8 +2693,6 @@ namespace Server.Mobiles
             }
 
             writer.WriteEncodedInt(Profession);
-
-            BOBFilter.Serialize(writer);
 
             var useMods = m_HairModID != -1 || m_BeardModID != -1;
 
@@ -3301,37 +2726,7 @@ namespace Server.Mobiles
 
         public override bool CanSee(Mobile m)
         {
-            if (m is CharacterStatue statue)
-            {
-                statue.OnRequestedAnimation(this);
-            }
-
-            if (m is PlayerMobile mobile && mobile.VisibilityList.Contains(this))
-            {
-                return true;
-            }
-
-            if (DuelContext?.Finished == false && DuelContext.m_Tournament != null && m_DuelPlayer?.Eliminated == false)
-            {
-                var owner = m;
-
-                if (owner is BaseCreature bc)
-                {
-                    var master = bc.GetMaster();
-
-                    if (master != null)
-                    {
-                        owner = master;
-                    }
-                }
-
-                if (m.AccessLevel == AccessLevel.Player && owner is PlayerMobile pm && pm.DuelContext != DuelContext)
-                {
-                    return false;
-                }
-            }
-
-            return base.CanSee(m);
+            return m is PlayerMobile mobile && mobile.VisibilityList.Contains(this) || base.CanSee(m);
         }
 
         public virtual void CheckedAnimate(int action, int frameCount, int repeatCount, bool forward, bool repeat, int delay)
@@ -3349,9 +2744,6 @@ namespace Server.Mobiles
         {
             base.OnAfterDelete();
 
-            var faction = Faction.Find(this);
-            faction?.RemoveMember(this);
-
             PlayerDeletedEvent(this);
         }
 
@@ -3359,113 +2751,19 @@ namespace Server.Mobiles
         {
             base.GetProperties(list);
 
-            if (Map == Faction.Facet)
+            if (!Core.ML || AllFollowers == null)
             {
-                var pl = PlayerState.Find(this);
-
-                if (pl != null)
-                {
-                    var faction = pl.Faction;
-
-                    if (faction.Commander == this)
-                    {
-                        // Commanding Lord of the ~1_FACTION_NAME~
-                        list.Add(1042733, $"{faction.Definition.PropName}");
-                    }
-                    else if (pl.Sheriff != null)
-                    {
-                        list.Add(
-                            1042734, // The Sheriff of  ~1_CITY~, ~2_FACTION_NAME~
-                            $"{pl.Sheriff.Definition.FriendlyName}\t{faction.Definition.PropName}"
-                        );
-                    }
-                    else if (pl.Finance != null)
-                    {
-                        list.Add(
-                            1042735, // The Finance Minister of ~1_CITY~, ~2_FACTION_NAME~
-                            $"{pl.Finance.Definition.FriendlyName}\t{faction.Definition.PropName}"
-                        );
-                    }
-                    else if (pl.MerchantTitle != MerchantTitle.None)
-                    {
-                        list.Add(
-                            1060776, // ~1_val~, ~2_val~
-                            $"{MerchantTitles.GetInfo(pl.MerchantTitle).Title}\t{faction.Definition.PropName}"
-                        );
-                    }
-                    else
-                    {
-                        list.Add(1060776, $"{pl.Rank.Title}\t{faction.Definition.PropName}"); // ~1_val~, ~2_val~
-                    }
-                }
+                return;
             }
 
-            // TODO: Add the Titles Menu for later Eras:
-            // https://uo.com/wiki/ultima-online-wiki/player/skill-titles-order/
-            if (DisplayChampionTitle)
+            foreach (var follower in AllFollowers)
             {
-                var titleLabel = ChampionTitleSystem.GetChampionTitleLabel(this);
-                if (titleLabel > 0)
+                if (follower is BaseCreature { ControlOrder: OrderType.Guard })
                 {
-                    list.Add(titleLabel);
+                    list.Add(501129); // guarded
+                    break;
                 }
             }
-
-            if (Core.ML && AllFollowers != null)
-            {
-                foreach (var follower in AllFollowers)
-                {
-                    if (follower is BaseCreature { ControlOrder: OrderType.Guard })
-                    {
-                        list.Add(501129); // guarded
-                        break;
-                    }
-                }
-            }
-        }
-
-        public override void OnSingleClick(Mobile from)
-        {
-            if (Map == Faction.Facet)
-            {
-                var pl = PlayerState.Find(this);
-
-                if (pl != null)
-                {
-                    string text;
-                    var ascii = false;
-
-                    var faction = pl.Faction;
-
-                    if (faction.Commander == this)
-                    {
-                        text =
-                            $"{(Female ? "(Commanding Lady of the " : "(Commanding Lord of the ")}{faction.Definition.FriendlyName})";
-                    }
-                    else if (pl.Sheriff != null)
-                    {
-                        text = $"(The Sheriff of {pl.Sheriff.Definition.FriendlyName}, {faction.Definition.FriendlyName})";
-                    }
-                    else if (pl.Finance != null)
-                    {
-                        text =
-                            $"(The Finance Minister of {pl.Finance.Definition.FriendlyName}, {faction.Definition.FriendlyName})";
-                    }
-                    else
-                    {
-                        ascii = true;
-
-                        var title = MerchantTitles.GetInfo(pl.MerchantTitle)?.Title?.String ?? pl.Rank.Title.String;
-                        text = $"({title}, {faction.Definition.FriendlyName})";
-                    }
-
-                    var hue = Faction.Find(from) == faction ? 98 : 38;
-
-                    PrivateOverheadMessage(MessageType.Label, hue, ascii, text, from.NetState);
-                }
-            }
-
-            base.OnSingleClick(from);
         }
 
         protected override bool OnMove(Direction d)
@@ -3731,7 +3029,7 @@ namespace Server.Mobiles
 
         private bool CanInsure(Item item)
         {
-            if (item is Container && item is not BaseQuiver || item is BagOfSending or KeyRing or PotionKeg or Sigil)
+            if (item is Container && item is not BaseQuiver || item is BagOfSending or KeyRing or PotionKeg)
             {
                 return false;
             }
@@ -3938,10 +3236,7 @@ namespace Server.Mobiles
         {
             if (NetState != null)
             {
-                BaseQuestGump.CloseOtherGumps(this);
                 var gumps = this.GetGumps();
-                gumps.Close<QuestLogDetailedGump>();
-                gumps.Close<QuestLogGump>();
                 gumps.Close<QuestOfferGump>();
             }
 
@@ -3970,10 +3265,6 @@ namespace Server.Mobiles
             {
                 item.QuestItem = false;
                 SendLocalizedMessage(1072354); // You remove Quest Item status from the item
-            }
-            else if (MLQuestSystem.MarkQuestItem(this, item))
-            {
-                SendLocalizedMessage(1072353); // You set the item to Quest Item status
             }
             else
             {
@@ -4026,11 +3317,6 @@ namespace Server.Mobiles
                 return ApplyPoisonResult.Immune;
             }
 
-            if (EvilOmenSpell.EndEffect(this))
-            {
-                poison = PoisonImpl.IncreaseLevel(poison);
-            }
-
             var result = base.ApplyPoison(from, poison);
 
             if (from != null && result == ApplyPoisonResult.Poisoned && PoisonTimer is PoisonImpl.PoisonTimer timer)
@@ -4042,11 +3328,11 @@ namespace Server.Mobiles
         }
 
         public override bool CheckPoisonImmunity(Mobile from, Poison poison) =>
-            Young && (DuelContext?.Started != true || DuelContext.Finished) || base.CheckPoisonImmunity(from, poison);
+            Young || base.CheckPoisonImmunity(from, poison);
 
         public override void OnPoisonImmunity(Mobile from, Poison poison)
         {
-            if (Young && (DuelContext?.Started != true || DuelContext.Finished))
+            if (Young)
             {
                 // You would have been poisoned, were you not new to the land of Britannia.
                 // Be careful in the future.
@@ -4093,11 +3379,6 @@ namespace Server.Mobiles
                 // You have successfully obtained a respectable skill level, and have outgrown your status as a young player!
                 ((Account)Account)?.RemoveYoungStatus(1019036);
             }
-
-            if (MLQuestSystem.Enabled)
-            {
-                MLQuestSystem.HandleSkillGain(this, skill);
-            }
         }
 
         public override void OnAccessLevelChanged(AccessLevel oldLevel)
@@ -4114,18 +3395,17 @@ namespace Server.Mobiles
 
         public override void OnDelete()
         {
-            ReceivedHonorContext?.Cancel();
-            SentHonorContext?.Cancel();
-
-            if (Stabled != null)
+            if (Stabled == null)
             {
-                foreach (var stabled in Stabled)
-                {
-                    stabled.Delete();
-                }
-
-                Stabled = null;
+                return;
             }
+
+            foreach (var stabled in Stabled)
+            {
+                stabled.Delete();
+            }
+
+            Stabled = null;
         }
 
         public override int ComputeMovementSpeed(Direction dir, bool checkTurning = true)
@@ -4135,18 +3415,11 @@ namespace Server.Mobiles
                 return CalcMoves.TurnDelay; // We are NOT actually moving (just a direction change)
             }
 
-            var context = TransformationSpellHelper.GetContext(this);
-
-            if (context?.Type == typeof(ReaperFormSpell))
-            {
-                return CalcMoves.WalkFootDelay;
-            }
-
             var running = (dir & Direction.Running) != 0;
 
             var onHorse = Mount != null;
 
-            if (onHorse || AnimalForm.GetContext(this)?.SpeedBoost == true)
+            if (onHorse)
             {
                 return running ? CalcMoves.RunMountDelay : CalcMoves.WalkMountDelay;
             }
@@ -4242,29 +3515,6 @@ namespace Server.Mobiles
             if (Young)
             {
                 suffix = suffix.Length == 0 ? "(Young)" : $"{suffix} (Young)";
-            }
-
-            if (EthicPlayer != null)
-            {
-                if (suffix.Length == 0)
-                {
-                    suffix = EthicPlayer.Ethic.Definition.Adjunct.String;
-                }
-                else
-                {
-                    suffix = $"{suffix} {EthicPlayer.Ethic.Definition.Adjunct.String}";
-                }
-            }
-
-            if (Core.ML && Map == Faction.Facet)
-            {
-                var faction = Faction.Find(this);
-
-                if (faction != null)
-                {
-                    var adjunct = $"[{faction.Definition.Abbreviation}]";
-                    suffix = suffix.Length == 0 ? adjunct : $"{suffix} {adjunct}";
-                }
             }
 
             return base.ApplyNameSuffix(suffix);
@@ -4436,28 +3686,6 @@ namespace Server.Mobiles
             DisplayChampionTitle = !DisplayChampionTitle;
             InvalidateProperties();
         }
-
-        public bool HasRecipe(Recipe r) => r != null && HasRecipe(r.ID);
-
-        public bool HasRecipe(int recipeID) => _acquiredRecipes?.Contains(recipeID) == true;
-
-        public void AcquireRecipe(Recipe r)
-        {
-            if (r != null)
-            {
-                AcquireRecipe(r.ID);
-            }
-        }
-
-        public void AcquireRecipe(int recipeID)
-        {
-            _acquiredRecipes ??= new HashSet<int>();
-            _acquiredRecipes.Add(recipeID);
-        }
-
-        public void RemoveRecipe(int recipeID) => _acquiredRecipes?.Remove(recipeID);
-
-        public void ResetRecipes() => _acquiredRecipes = null;
 
         public void SendAddBuffPacket(BuffInfo buffInfo)
         {

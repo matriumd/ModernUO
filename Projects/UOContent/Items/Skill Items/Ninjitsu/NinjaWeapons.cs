@@ -2,9 +2,6 @@ using System;
 using Server.ContextMenus;
 using Server.Mobiles;
 using Server.SkillHandlers;
-using Server.Spells.Chivalry;
-using Server.Spells.Necromancy;
-using Server.Spells.Ninjitsu;
 using Server.Targeting;
 
 /*

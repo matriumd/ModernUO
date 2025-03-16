@@ -2,7 +2,6 @@ using ModernUO.Serialization;
 using System;
 using System.Collections.Generic;
 using Server.Collections;
-using Server.Engines.CannedEvil;
 using Server.Items;
 using Server.Network;
 

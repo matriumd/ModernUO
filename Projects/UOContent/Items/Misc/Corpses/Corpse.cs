@@ -4,8 +4,6 @@ using ModernUO.Serialization;
 using Server.Collections;
 using Server.ContextMenus;
 using Server.Engines.PartySystem;
-using Server.Engines.Quests.Doom;
-using Server.Engines.Quests.Haven;
 using Server.Guilds;
 using Server.Misc;
 using Server.Mobiles;
@@ -121,24 +119,21 @@ public partial class Corpse : Container, ICarvable
     [SerializedCommandProperty(AccessLevel.GameMaster)]
     private AccessLevel _accessLevel;
 
-    [SerializableField(11, setter: "private")]
-    private Guild _guild;
-
-    [SerializableField(12)]
+    [SerializableField(11)]
     [SerializedCommandProperty(AccessLevel.GameMaster)]
     private int _kills;
 
-    [SerializableField(13, setter: "private")]
+    [SerializableField(12, setter: "private")]
     [SerializedCommandProperty(AccessLevel.GameMaster)]
     private List<Item> _equipItems;
 
     [CanBeNull]
-    [SerializableField(14, setter: "private")]
+    [SerializableField(13, setter: "private")]
     [SerializedCommandProperty(AccessLevel.GameMaster)]
     private VirtualHairInfo _hair;
 
     [CanBeNull]
-    [SerializableField(15, setter: "private")]
+    [SerializableField(14, setter: "private")]
     [SerializedCommandProperty(AccessLevel.GameMaster)]
     private VirtualHairInfo _facialHair;
 
@@ -169,7 +164,6 @@ public partial class Corpse : Container, ICarvable
         _timeOfDeath = Core.Now;
 
         _accessLevel = owner.AccessLevel;
-        _guild = owner.Guild as Guild;
         _kills = owner.Kills;
         SetFlag(CorpseFlag.Criminal, owner.Criminal);
 
@@ -269,7 +263,6 @@ public partial class Corpse : Container, ICarvable
         _owner = content.Owner;
         _corpseName = content.CorpseName;
         _accessLevel = content.AccessLevel;
-        _guild = content.Guild;
         _kills = content.Kills;
         _equipItems = content.EquipItems;
     }
@@ -527,9 +520,7 @@ public partial class Corpse : Container, ICarvable
 
     public static Container Mobile_CreateCorpseHandler(Mobile owner, List<Item> initialContent, List<Item> equipItems)
     {
-        var c = owner is MilitiaFighter
-            ? new MilitiaFighterCorpse(owner, owner.Hair, owner.FacialHair, equipItems)
-            : new Corpse(owner, owner.Hair, owner.FacialHair, equipItems);
+        var c = new Corpse(owner, owner.Hair, owner.FacialHair, equipItems);
 
         owner.Corpse = c;
 
@@ -678,7 +669,7 @@ public partial class Corpse : Container, ICarvable
             }
         }
 
-        return NotorietyHandlers.CorpseNotoriety(from, this) == Notoriety.Innocent;
+        return false;
     }
 
     public override bool CheckItemUse(Mobile from, Item item) =>
@@ -690,11 +681,6 @@ public partial class Corpse : Container, ICarvable
     public override void OnItemUsed(Mobile from, Item item)
     {
         base.OnItemUsed(from, item);
-
-        if (item is Food)
-        {
-            from.RevealingAction();
-        }
 
         if (item != this && IsCriminalAction(from))
         {
@@ -900,62 +886,9 @@ public partial class Corpse : Container, ICarvable
             return;
         }
 
-        if (from is not PlayerMobile player)
+        if (from is not PlayerMobile)
         {
             return;
-        }
-
-        var qs = player.Quest;
-
-        if (qs is UzeraanTurmoilQuest)
-        {
-            var obj = qs.FindObjective<GetDaemonBoneObjective>();
-            if (obj?.CorpseWithBone == this && (!obj.Completed || UzeraanTurmoilQuest.HasLostDaemonBone(player)))
-            {
-                Item bone = new QuestDaemonBone();
-
-                if (player.PlaceInBackpack(bone))
-                {
-                    obj.CorpseWithBone = null;
-                    // You rummage through the bones and find a Daemon Bone!  You quickly place the item in your pack.
-                    player.SendLocalizedMessage(1049341, "", 0x22);
-
-                    if (!obj.Completed)
-                    {
-                        obj.Complete();
-                    }
-                }
-                else
-                {
-                    bone.Delete();
-                    // Rummaging through the bones you find a Daemon Bone, but can't pick it up because your pack is too full.  Come back when you have more room in your pack.
-                    player.SendLocalizedMessage(1049342, "", 0x22);
-                }
-
-                return;
-            }
-        }
-        else if (qs is TheSummoningQuest)
-        {
-            var obj = qs.FindObjective<VanquishDaemonObjective>();
-            if (obj?.Completed == true && obj.CorpseWithSkull == this)
-            {
-                var sk = new GoldenSkull();
-
-                if (player.PlaceInBackpack(sk))
-                {
-                    obj.CorpseWithSkull = null;
-                    // For your valor in combating the devourer, you have been awarded a golden skull.
-                    player.SendLocalizedMessage(1050022);
-                    qs.Complete();
-                }
-                else
-                {
-                    sk.Delete();
-                    // You find a golden skull, but your backpack is too full to carry it.
-                    player.SendLocalizedMessage(1050023);
-                }
-            }
         }
 
         base.OnDoubleClick(from);
@@ -989,7 +922,7 @@ public partial class Corpse : Container, ICarvable
 
     public override void OnAosSingleClick(Mobile from)
     {
-        var hue = Notoriety.GetHue(NotorietyHandlers.CorpseNotoriety(from, this));
+        var hue = Notoriety.GetHue(Notoriety.Innocent);
         var opl = PropertyList;
 
         if (opl.Header > 0)
@@ -1000,7 +933,7 @@ public partial class Corpse : Container, ICarvable
 
     public override void OnSingleClick(Mobile from)
     {
-        var hue = Notoriety.GetHue(NotorietyHandlers.CorpseNotoriety(from, this));
+        var hue = Notoriety.GetHue(Notoriety.Innocent);
 
         if (ItemID == 0x2006) // Corpse form
         {

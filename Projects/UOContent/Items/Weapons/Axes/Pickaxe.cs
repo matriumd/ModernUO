@@ -1,7 +1,5 @@
 using System;
 using ModernUO.Serialization;
-using Server.Engines.Craft;
-using Server.Engines.Harvest;
 
 namespace Server.Items
 {

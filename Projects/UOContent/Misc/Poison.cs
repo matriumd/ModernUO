@@ -1,10 +1,4 @@
 using System;
-using Server.Engines.Virtues;
-using Server.Items;
-using Server.Mobiles;
-using Server.Spells;
-using Server.Spells.Necromancy;
-using Server.Spells.Ninjitsu;
 
 namespace Server
 {
@@ -92,24 +86,6 @@ namespace Server
 
             protected override void OnTick()
             {
-                if (Core.AOS && m_Poison.Level < 4 &&
-                    TransformationSpellHelper.UnderTransformation(m_Mobile, typeof(VampiricEmbraceSpell)) ||
-                    m_Poison.Level < 3 && OrangePetals.UnderEffect(m_Mobile) ||
-                    AnimalForm.UnderTransformation(m_Mobile, typeof(Unicorn)))
-                {
-                    if (m_Mobile.CurePoison(m_Mobile))
-                    {
-                        // * You feel yourself resisting the effects of the poison *
-                        m_Mobile.LocalOverheadMessage(MessageType.Emote, 0x3F, 1114441);
-
-                        // * ~1_NAME~ seems resistant to the poison *
-                        m_Mobile.NonlocalOverheadMessage(MessageType.Emote, 0x3F, 1114442, m_Mobile.Name);
-
-                        Stop();
-                        return;
-                    }
-                }
-
                 if (m_Index++ == m_Poison.m_Count)
                 {
                     m_Mobile.SendLocalizedMessage(502136); // The poison seems to have worn off.
@@ -142,8 +118,6 @@ namespace Server
                 }
 
                 From?.DoHarmful(m_Mobile, true);
-
-                (m_Mobile as IHonorTarget)?.ReceivedHonorContext?.OnTargetPoisoned();
 
                 AOS.Damage(m_Mobile, From, damage, 0, 0, 0, 100, 0);
 

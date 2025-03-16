@@ -1,5 +1,4 @@
 using System;
-using Server.Engines.ConPVP;
 using Server.Items;
 using Server.Misc;
 using Server.Targeting;

@@ -3,7 +3,6 @@ using ModernUO.CodeGeneratedEvents;
 using Server.Mobiles;
 using Server.Network;
 using Server.Spells;
-using Server.Spells.Ninjitsu;
 
 namespace Server.Regions;
 

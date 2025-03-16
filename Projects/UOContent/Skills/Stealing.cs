@@ -1,15 +1,9 @@
 using System;
 using System.Collections.Generic;
 using ModernUO.CodeGeneratedEvents;
-using Server.Engines.ConPVP;
-using Server.Engines.Stealables;
-using Server.Factions;
 using Server.Items;
 using Server.Mobiles;
 using Server.Spells;
-using Server.Spells.Fifth;
-using Server.Spells.Ninjitsu;
-using Server.Spells.Seventh;
 using Server.Targeting;
 
 namespace Server.SkillHandlers

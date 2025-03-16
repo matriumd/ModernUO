@@ -1,6 +1,5 @@
 using System.Text.Json.Serialization;
 using Server.Spells;
-using Server.Spells.Sixth;
 
 namespace Server.Regions;
 

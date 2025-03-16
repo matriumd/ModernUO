@@ -1,6 +1,5 @@
 using System;
 using ModernUO.Serialization;
-using Server.Engines.Craft;
 
 namespace Server.Items;
 
@@ -19,7 +18,7 @@ public enum GemType
 }
 
 [SerializationGenerator(4, false)]
-public abstract partial class BaseJewel : Item, ICraftable, IAosItem
+public abstract partial class BaseJewel : Item, IAosItem
 {
     [EncodedInt]
     [InvalidateProperties]
@@ -124,67 +123,6 @@ public abstract partial class BaseJewel : Item, ICraftable, IAosItem
     }
 
     public virtual int ArtifactRarity => 0;
-
-    public int OnCraft(
-        int quality, bool makersMark, Mobile from, CraftSystem craftSystem, Type typeRes, BaseTool tool,
-        CraftItem craftItem, int resHue
-    )
-    {
-        var resourceType = typeRes ?? craftItem.Resources[0].ItemType;
-
-        Resource = CraftResources.GetFromType(resourceType);
-
-        var context = craftSystem.GetContext(from);
-
-        if (context?.DoNotColor == true)
-        {
-            Hue = 0;
-        }
-
-        if (craftItem.Resources.Count > 1)
-        {
-            resourceType = craftItem.Resources[1].ItemType;
-
-            if (resourceType == typeof(StarSapphire))
-            {
-                GemType = GemType.StarSapphire;
-            }
-            else if (resourceType == typeof(Emerald))
-            {
-                GemType = GemType.Emerald;
-            }
-            else if (resourceType == typeof(Sapphire))
-            {
-                GemType = GemType.Sapphire;
-            }
-            else if (resourceType == typeof(Ruby))
-            {
-                GemType = GemType.Ruby;
-            }
-            else if (resourceType == typeof(Citrine))
-            {
-                GemType = GemType.Citrine;
-            }
-            else if (resourceType == typeof(Amethyst))
-            {
-                GemType = GemType.Amethyst;
-            }
-            else if (resourceType == typeof(Tourmaline))
-            {
-                GemType = GemType.Tourmaline;
-            }
-            else if (resourceType == typeof(Amber))
-            {
-                GemType = GemType.Amber;
-            }
-            else if (resourceType == typeof(Diamond))
-            {
-                GemType = GemType.Diamond;
-            }
-        }
-
-        return 1;
-    }
 
     public override void OnAfterDuped(Item newItem)
     {

@@ -1,5 +1,4 @@
 using ModernUO.Serialization;
-using Server.Engines.ConPVP;
 
 namespace Server.Items
 {

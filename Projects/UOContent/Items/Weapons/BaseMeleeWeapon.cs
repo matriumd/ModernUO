@@ -1,5 +1,3 @@
-using Server.Spells.Spellweaving;
-
 namespace Server.Items
 {
     public abstract class BaseMeleeWeapon : BaseWeapon

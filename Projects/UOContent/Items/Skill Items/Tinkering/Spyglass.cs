@@ -1,5 +1,4 @@
 using ModernUO.Serialization;
-using Server.Engines.Quests.Hag;
 using Server.Mobiles;
 using Server.Network;
 
@@ -40,35 +39,5 @@ public partial class Spyglass : Item
             AffixType.Prepend,
             "Felucca : "
         );
-
-        if (from is PlayerMobile player)
-        {
-            var qs = player.Quest;
-
-            if (qs is not WitchApprenticeQuest)
-            {
-                return;
-            }
-
-            var obj = qs.FindObjective<FindIngredientObjective>();
-
-            if (obj?.Completed == false && obj.Ingredient == Ingredient.StarChart)
-            {
-                Clock.GetTime(from.Map, from.X, from.Y, out var hours, out int _);
-
-                if (hours is < 5 or > 17)
-                {
-                    // You gaze up into the glittering night sky.  With great care, you compose a chart of the most prominent star patterns.
-                    player.SendLocalizedMessage(1055040);
-
-                    obj.Complete();
-                }
-                else
-                {
-                    // You gaze up into the sky, but it is not dark enough to see any stars.
-                    player.SendLocalizedMessage(1055039);
-                }
-            }
-        }
     }
 }

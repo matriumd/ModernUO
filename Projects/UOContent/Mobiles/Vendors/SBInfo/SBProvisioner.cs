@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using Server.Engines.Mahjong;
-using Server.Engines.Plants;
 using Server.Guilds;
 using Server.Items;
 using Server.Multis;
@@ -21,8 +19,6 @@ namespace Server.Mobiles
                 {
                     Add(new GenericBuyInfo("1079931", typeof(SalvageBag), 1255, 20, 0xE76, Utility.RandomBlueHue()));
                 }
-
-                Add(new GenericBuyInfo("1060834", typeof(PlantBowl), 2, 20, 0x15FD, 0));
 
                 Add(new GenericBuyInfo(typeof(Arrow), 2, 20, 0xF3F, 0));
                 Add(new GenericBuyInfo(typeof(Bolt), 5, 20, 0x1BFB, 0));
@@ -84,16 +80,6 @@ namespace Server.Mobiles
 
                 Add(new GenericBuyInfo("1041060", typeof(HairDye), 60, 20, 0xEFF, 0));
 
-                Add(new GenericBuyInfo("1016450", typeof(Chessboard), 2, 20, 0xFA6, 0));
-                Add(new GenericBuyInfo("1016449", typeof(CheckerBoard), 2, 20, 0xFA6, 0));
-                Add(new GenericBuyInfo(typeof(Backgammon), 2, 20, 0xE1C, 0));
-                if (Core.AOS)
-                {
-                    Add(new GenericBuyInfo(typeof(MahjongGame), 6, 20, 0xFAA, 0));
-                }
-
-                Add(new GenericBuyInfo(typeof(Dices), 2, 20, 0xFA7, 0));
-
                 if (Core.AOS)
                 {
                     Add(new GenericBuyInfo(typeof(SmallBagBall), 3, 20, 0x2256, 0));
@@ -139,10 +125,6 @@ namespace Server.Mobiles
                 Add(typeof(WoodenBox), 7);
                 Add(typeof(Kindling), 1);
                 Add(typeof(HairDye), 30);
-                Add(typeof(Chessboard), 1);
-                Add(typeof(CheckerBoard), 1);
-                Add(typeof(Backgammon), 1);
-                Add(typeof(Dices), 1);
 
                 Add(typeof(Beeswax), 1);
 

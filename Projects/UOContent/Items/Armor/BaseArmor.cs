@@ -2,9 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using ModernUO.Serialization;
-using Server.Engines.Craft;
-using Server.Ethics;
-using Server.Factions;
 using Server.Network;
 using Server.Text;
 using AMA = Server.Items.ArmorMeditationAllowance;
@@ -14,7 +11,7 @@ namespace Server.Items
 {
     [SerializationGenerator(9, false)]
     public abstract partial class BaseArmor
-        : Item, IScissorable, IFactionItem, ICraftable, IWearableDurability, IAosItem, IIdentifiable
+        : Item, IWearableDurability, IAosItem, IIdentifiable
     {
         [SerializedIgnoreDupe]
         [SerializableField(0, setter: "private")]
@@ -151,8 +148,6 @@ namespace Server.Items
         [SerializableFieldSaveFlag(24)]
         private bool ShouldSerializePlayerConstructed() => _playerConstructed;
 
-        private FactionItem m_FactionState;
-
         public BaseArmor(int itemID) : base(itemID)
         {
             _crafter = null;
@@ -266,11 +261,6 @@ namespace Server.Items
                     UnscaleDurability();
 
                     _resource = value;
-
-                    if (CraftItem.RetainsColor(GetType()))
-                    {
-                        Hue = CraftResources.GetHue(_resource);
-                    }
 
                     Invalidate();
                     (Parent as Mobile)?.UpdateResistances();
@@ -553,144 +543,6 @@ namespace Server.Items
                 base.Hue = value;
                 InvalidateProperties();
             }
-        }
-
-        public virtual int OnCraft(
-            int quality, bool makersMark, Mobile from, CraftSystem craftSystem, Type typeRes, BaseTool tool,
-            CraftItem craftItem, int resHue
-        )
-        {
-            Quality = (ArmorQuality)quality;
-
-            if (makersMark)
-            {
-                Crafter = from.RawName;
-            }
-
-            var resourceType = typeRes ?? craftItem.Resources[0].ItemType;
-
-            Resource = CraftResources.GetFromType(resourceType);
-            PlayerConstructed = true;
-            Identified = true;
-
-            var context = craftSystem.GetContext(from);
-
-            if (context?.DoNotColor == true)
-            {
-                Hue = 0;
-            }
-
-            if (Quality == ArmorQuality.Exceptional)
-            {
-                // Guessed Core.ML removed exceptional resist bonuses from crafted shields
-                if (!(Core.ML && this is BaseShield))
-                {
-                    DistributeBonuses(
-                        tool is BaseRunicTool ? 6 :
-                        // Not sure since when, but right now 15 points are added, not 14.
-                        Core.SE ? 15 : 14
-                    );
-                }
-
-                if (Core.ML && this is not BaseShield)
-                {
-                    var bonus = (int)(from.Skills.ArmsLore.Value / 20);
-
-                    for (var i = 0; i < bonus; i++)
-                    {
-                        switch (Utility.Random(5))
-                        {
-                            case 0:
-                                {
-                                    PhysicalBonus++;
-                                    break;
-                                }
-                            case 1:
-                                {
-                                    FireBonus++;
-                                    break;
-                                }
-                            case 2:
-                                {
-                                    ColdBonus++;
-                                    break;
-                                }
-                            case 3:
-                                {
-                                    EnergyBonus++;
-                                    break;
-                                }
-                            case 4:
-                                {
-                                    PoisonBonus++;
-                                    break;
-                                }
-                        }
-                    }
-
-                    from.CheckSkill(SkillName.ArmsLore, 0, 100);
-                }
-            }
-
-            if (Core.AOS)
-            {
-                (tool as BaseRunicTool)?.ApplyAttributesTo(this);
-            }
-
-            return quality;
-        }
-
-        public FactionItem FactionItemState
-        {
-            get => m_FactionState;
-            set
-            {
-                m_FactionState = value;
-
-                if (m_FactionState == null)
-                {
-                    Hue = CraftResources.GetHue(Resource);
-                }
-
-                LootType = m_FactionState == null ? LootType.Regular : LootType.Blessed;
-            }
-        }
-
-        public bool Scissor(Mobile from, Scissors scissors)
-        {
-            if (!IsChildOf(from.Backpack))
-            {
-                from.SendLocalizedMessage(502437); // Items you wish to cut must be in your backpack.
-                return false;
-            }
-
-            if (Ethic.IsImbued(this))
-            {
-                from.SendLocalizedMessage(502440); // Scissors can not be used on that to produce anything.
-                return false;
-            }
-
-            var system = DefTailoring.CraftSystem;
-
-            var item = system.CraftItems.SearchFor(GetType());
-
-            if (item?.Resources.Count == 1 && item.Resources[0].Amount >= 2)
-            {
-                try
-                {
-                    var res = CraftResources.GetInfo(_resource).ResourceTypes[0].CreateInstance<Item>();
-
-                    ScissorHelper(from, res, PlayerConstructed ? item.Resources[0].Amount / 2 : 1);
-                    return true;
-                }
-                catch
-                {
-                    // ignored
-                }
-            }
-
-            from.SendLocalizedMessage(502440); // Scissors can not be used on that to produce anything.
-            return false;
         }
 
         public virtual bool CanFortify => true;
@@ -1070,23 +922,8 @@ namespace Server.Items
             m?.CheckStatTimers();
         }
 
-        public override bool AllowSecureTrade(Mobile from, Mobile to, Mobile newOwner, bool accepted)
-        {
-            if (!Ethic.CheckTrade(from, to, newOwner, this))
-            {
-                return false;
-            }
-
-            return base.AllowSecureTrade(from, to, newOwner, accepted);
-        }
-
         public override bool CanEquip(Mobile from)
         {
-            if (!Ethic.CheckEquip(from, this))
-            {
-                return false;
-            }
-
             if (from.AccessLevel < AccessLevel.GameMaster)
             {
                 if (!CheckRace(from))
@@ -1297,11 +1134,6 @@ namespace Server.Items
                 list.Add(1050043, _crafter); // crafted by ~1_NAME~
             }
 
-            if (m_FactionState != null)
-            {
-                list.Add(1041350); // faction item
-            }
-
             if (RequiredRaces == Race.AllowElvesOnly)
             {
                 list.Add(1075086); // Elves Only
@@ -1494,11 +1326,6 @@ namespace Server.Items
                 {
                     attrs.Add(new EquipInfoAttribute(1049643)); // cursed
                 }
-            }
-
-            if (m_FactionState != null)
-            {
-                attrs.Add(new EquipInfoAttribute(1041350)); // faction item
             }
 
             if (_quality == ArmorQuality.Exceptional)

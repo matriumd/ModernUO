@@ -1,11 +1,7 @@
 using System;
 using ModernUO.Serialization;
-using Server.Factions;
 using Server.Mobiles;
 using Server.Spells;
-using Server.Spells.Fifth;
-using Server.Spells.Ninjitsu;
-using Server.Spells.Seventh;
 
 namespace Server.Items;
 

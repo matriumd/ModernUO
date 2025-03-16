@@ -4,14 +4,9 @@ using System.Runtime.CompilerServices;
 using ModernUO.CodeGeneratedEvents;
 using Server.Collections;
 using Server.ContextMenus;
-using Server.Engines.ConPVP;
-using Server.Engines.MLQuests;
 using Server.Engines.Quests.Doom;
 using Server.Engines.Quests.Haven;
 using Server.Engines.Spawners;
-using Server.Engines.Virtues;
-using Server.Ethics;
-using Server.Factions;
 using Server.Items;
 using Server.Misc;
 using Server.Multis;
@@ -19,10 +14,6 @@ using Server.Network;
 using Server.Regions;
 using Server.SkillHandlers;
 using Server.Spells;
-using Server.Spells.Bushido;
-using Server.Spells.Necromancy;
-using Server.Spells.Sixth;
-using Server.Spells.Spellweaving;
 using Server.Targeting;
 
 namespace Server.Mobiles

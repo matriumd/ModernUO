@@ -13,9 +13,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  *************************************************************************/
 
-using Server.Engines.Virtues;
 using Server.Exceptions;
-using Server.Mobiles;
 using Server.Network;
 using System;
 using System.Buffers;
@@ -164,31 +162,6 @@ public static partial class GumpSystem
                 textBlock
             );
             baseGump.OnResponse(state, relayInfo);
-        }
-
-        if (typeId == 461)
-        {
-            // Virtue gump
-            var switchCount = reader.Remaining >= 4 ? reader.ReadInt32() : 0;
-
-            if (buttonId == 1 && switchCount > 0)
-            {
-                var beheld = World.FindEntity<PlayerMobile>((Serial)reader.ReadUInt32());
-
-                if (beheld != null)
-                {
-                    VirtueGump.RequestVirtueGump((PlayerMobile)state.Mobile, beheld);
-                }
-            }
-            else
-            {
-                var beheld = World.FindMobile(serial);
-
-                if (beheld != null)
-                {
-                    VirtueGump.RequestVirtueItem((PlayerMobile)state.Mobile, beheld, buttonId);
-                }
-            }
         }
     }
 }

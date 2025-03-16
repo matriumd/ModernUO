@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using ModernUO.Serialization;
 using Server.Collections;
 using Server.Spells;
-using Server.Spells.Fourth;
 using Server.Targeting;
 
 namespace Server.Items;

@@ -1,7 +1,6 @@
 using ModernUO.Serialization;
 using System;
 using System.Runtime.CompilerServices;
-using Server.Engines.VeteranRewards;
 using Server.Multis;
 using Server.Spells;
 

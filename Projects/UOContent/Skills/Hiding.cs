@@ -1,6 +1,5 @@
 using System;
 using Server.Multis;
-using Server.Spells.Sixth;
 using Server.Targeting;
 
 namespace Server.SkillHandlers

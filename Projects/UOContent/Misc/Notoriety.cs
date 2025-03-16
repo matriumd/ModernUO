@@ -1,13 +1,10 @@
 using System.Collections.Generic;
-using Server.Engines.ConPVP;
 using Server.Engines.PartySystem;
-using Server.Factions;
 using Server.Guilds;
 using Server.Items;
 using Server.Mobiles;
 using Server.Multis;
 using Server.SkillHandlers;
-using Server.Spells.Seventh;
 
 namespace Server.Misc
 {
@@ -29,32 +26,6 @@ namespace Server.Misc
             Mobile.AllowHarmfulHandler = Mobile_AllowHarmful;
         }
 
-        private static GuildStatus GetGuildStatus(Mobile m)
-        {
-            if (m.Guild == null)
-            {
-                return GuildStatus.None;
-            }
-
-            if (((Guild)m.Guild).Enemies.Count == 0 && m.Guild.Type == GuildType.Regular)
-            {
-                return GuildStatus.Peaceful;
-            }
-
-            return GuildStatus.Waring;
-        }
-
-        private static bool CheckBeneficialStatus(GuildStatus from, GuildStatus target) =>
-            from != GuildStatus.Waring && target != GuildStatus.Waring;
-
-        /*private static bool CheckHarmfulStatus( GuildStatus from, GuildStatus target )
-        {
-          if (from == GuildStatus.Waring && target == GuildStatus.Waring)
-            return true;
-
-          return false;
-        }*/
-
         public static bool Mobile_AllowBeneficial(Mobile from, Mobile target)
         {
             if (from == null || target == null || from.AccessLevel > AccessLevel.Player ||
@@ -63,64 +34,13 @@ namespace Server.Misc
                 return true;
             }
 
-            if (from.Region.IsPartOf<SafeZone>() || target.Region.IsPartOf<SafeZone>())
-            {
-                return false;
-            }
-
             var bcFrom = from as BaseCreature;
             var bcTarg = target as BaseCreature;
 
             var pmFrom = (bcFrom?.GetMaster() ?? from) as PlayerMobile;
             var pmTarg = (bcTarg?.GetMaster() ?? target) as PlayerMobile;
 
-            if (pmFrom != null && pmTarg != null)
-            {
-                if (pmFrom.DuelContext != pmTarg.DuelContext &&
-                    (pmFrom.DuelContext?.Started == true || pmTarg.DuelContext?.Started == true))
-                {
-                    return false;
-                }
-
-                if (pmFrom.DuelContext != null && pmFrom.DuelContext == pmTarg.DuelContext &&
-                    (pmFrom.DuelContext.StartedReadyCountdown && !pmFrom.DuelContext.Started || pmFrom.DuelContext.Tied ||
-                     pmFrom.DuelPlayer.Eliminated || pmTarg.DuelPlayer.Eliminated))
-                {
-                    return false;
-                }
-
-                if (pmFrom.DuelPlayer?.Eliminated == false && pmFrom.DuelContext?.IsSuddenDeath == true)
-                {
-                    return false;
-                }
-
-                if (pmFrom.DuelContext != null && pmFrom.DuelContext == pmTarg.DuelContext &&
-                    pmFrom.DuelContext.m_Tournament?.IsNotoRestricted == true &&
-                    pmFrom.DuelPlayer != null && pmTarg.DuelPlayer != null &&
-                    pmFrom.DuelPlayer.Participant != pmTarg.DuelPlayer.Participant)
-                {
-                    return false;
-                }
-
-                if (pmFrom.DuelContext?.Started == true && pmFrom.DuelContext == pmTarg.DuelContext)
-                {
-                    return true;
-                }
-            }
-
-            if (pmFrom?.DuelContext?.Started == true || pmTarg?.DuelContext?.Started == true)
-            {
-                return false;
-            }
-
             var map = from.Map;
-
-            var targetFaction = Faction.Find(target, true);
-
-            if ((!Core.ML || map == Faction.Facet) && targetFaction != null && Faction.Find(from, true) != targetFaction)
-            {
-                return false;
-            }
 
             if ((map?.Rules & MapRules.BeneficialRestrictions) == 0)
             {
@@ -142,13 +62,7 @@ namespace Server.Misc
                 return false; // Young players cannot perform beneficial actions towards non-young players or pets
             }
 
-            if (from.Guild is Guild fromGuild && target.Guild is Guild targetGuild &&
-                (targetGuild == fromGuild || fromGuild.IsAlly(targetGuild)))
-            {
-                return true; // Guild members can be beneficial
-            }
-
-            return CheckBeneficialStatus(GetGuildStatus(from), GetGuildStatus(target));
+            return true;
         }
 
         public static bool Mobile_AllowHarmful(Mobile from, Mobile target)
@@ -159,50 +73,10 @@ namespace Server.Misc
                 return true;
             }
 
-            if (from.Region.IsPartOf<SafeZone>() || target.Region.IsPartOf<SafeZone>())
-            {
-                return false;
-            }
-
             var bcFrom = from as BaseCreature;
             var bcTarg = target as BaseCreature;
 
             var pmFrom = (bcFrom?.GetMaster() ?? from) as PlayerMobile;
-            var pmTarg = (bcTarg?.GetMaster() ?? target) as PlayerMobile;
-
-            if (pmFrom != null && pmTarg != null)
-            {
-                if (pmFrom.DuelContext != pmTarg.DuelContext &&
-                    (pmFrom.DuelContext?.Started == true || pmTarg.DuelContext?.Started == true))
-                {
-                    return false;
-                }
-
-                if (pmFrom.DuelContext != null && pmFrom.DuelContext == pmTarg.DuelContext &&
-                    (pmFrom.DuelContext.StartedReadyCountdown && !pmFrom.DuelContext.Started || pmFrom.DuelContext.Tied ||
-                     pmFrom.DuelPlayer.Eliminated || pmTarg.DuelPlayer.Eliminated))
-                {
-                    return false;
-                }
-
-                if (pmFrom.DuelContext != null && pmFrom.DuelContext == pmTarg.DuelContext &&
-                    pmFrom.DuelContext.m_Tournament?.IsNotoRestricted == true &&
-                    pmFrom.DuelPlayer != null && pmTarg.DuelPlayer != null &&
-                    pmFrom.DuelPlayer.Participant == pmTarg.DuelPlayer.Participant)
-                {
-                    return false;
-                }
-
-                if (pmFrom.DuelContext?.Started == true && pmFrom.DuelContext == pmTarg.DuelContext)
-                {
-                    return true;
-                }
-            }
-
-            if (pmFrom?.DuelContext?.Started == true || pmTarg?.DuelContext?.Started == true)
-            {
-                return false;
-            }
 
             var map = from.Map;
 
@@ -216,15 +90,6 @@ namespace Server.Misc
                 // Uncontrolled NPCs are only restricted by the young system
                 return CheckAggressor(from.Aggressors, target) || CheckAggressed(from.Aggressed, target) ||
                        (target as PlayerMobile)?.CheckYoungProtection(from) != true;
-            }
-
-            var fromGuild = GetGuildFor(from.Guild as Guild, from);
-            var targetGuild = GetGuildFor(target.Guild as Guild, target);
-
-            if (fromGuild != null && targetGuild != null &&
-                (fromGuild == targetGuild || fromGuild.IsAlly(targetGuild) || fromGuild.IsEnemy(targetGuild)))
-            {
-                return true; // Guild allies or enemies can be harmful
             }
 
             if (bcTarg?.Controlled == true
@@ -246,137 +111,6 @@ namespace Server.Misc
             return bcTarg?.InitialInnocent == true || Notoriety.Compute(from, target) != Notoriety.Innocent;
         }
 
-        public static Guild GetGuildFor(Guild def, Mobile m)
-        {
-            if (m is not BaseCreature c || !c.Controlled || c.ControlMaster == null)
-            {
-                return def;
-            }
-
-            c.DisplayGuildTitle = false;
-
-            if (c.Map != Map.Internal && (Core.AOS || Guild.NewGuildSystem || c.ControlOrder is OrderType.Attack or OrderType.Guard))
-            {
-                return (Guild)(c.Guild = c.ControlMaster.Guild);
-            }
-
-            if (c.Map == Map.Internal || c.ControlMaster.Guild == null)
-            {
-                return (Guild)(c.Guild = null);
-            }
-
-            return def;
-        }
-
-        public static int CorpseNotoriety(Mobile source, Corpse target)
-        {
-            if (target.AccessLevel > AccessLevel.Player)
-            {
-                return Notoriety.CanBeAttacked;
-            }
-
-            Body body = target.Amount;
-
-            var sourceGuild = GetGuildFor(source.Guild as Guild, source);
-            var targetGuild = GetGuildFor(target.Guild, target.Owner);
-
-            var srcFaction = Faction.Find(source, true, true);
-            var trgFaction = Faction.Find(target.Owner, true, true);
-            var list = target.Aggressors;
-
-            if (sourceGuild != null && targetGuild != null)
-            {
-                if (sourceGuild == targetGuild || sourceGuild.IsAlly(targetGuild))
-                {
-                    return Notoriety.Ally;
-                }
-
-                if (sourceGuild.IsEnemy(targetGuild))
-                {
-                    return Notoriety.Enemy;
-                }
-            }
-
-            if (target.Owner is BaseCreature creature)
-            {
-                if (srcFaction != null && trgFaction != null && srcFaction != trgFaction && source.Map == Faction.Facet)
-                {
-                    return Notoriety.Enemy;
-                }
-
-                if (CheckHouseFlag(source, creature, target.Location, target.Map))
-                {
-                    return Notoriety.CanBeAttacked;
-                }
-
-                var actual = Notoriety.CanBeAttacked;
-
-                if (target.Kills >= 5 || body.IsMonster && IsSummoned(creature) || creature.AlwaysMurderer ||
-                    creature.IsAnimatedDead)
-                {
-                    actual = Notoriety.Murderer;
-                }
-
-                if (Core.Now >= target.TimeOfDeath + Corpse.MonsterLootRightSacrifice)
-                {
-                    return actual;
-                }
-
-                var sourceParty = Party.Get(source);
-
-                for (var i = 0; i < list.Count; ++i)
-                {
-                    if (list[i] == source || sourceParty != null && Party.Get(list[i]) == sourceParty)
-                    {
-                        return actual;
-                    }
-                }
-
-                return Notoriety.Innocent;
-            }
-
-            if (target.Kills >= 5 || body.IsMonster)
-            {
-                return Notoriety.Murderer;
-            }
-
-            if (target.Criminal && (target.Map?.Rules & MapRules.HarmfulRestrictions) == 0)
-            {
-                return Notoriety.Criminal;
-            }
-
-            if (srcFaction != null && trgFaction != null && srcFaction != trgFaction && source.Map == Faction.Facet)
-            {
-                for (var i = 0; i < list.Count; ++i)
-                {
-                    if (list[i] == source || list[i] is BaseFactionGuard)
-                    {
-                        return Notoriety.Enemy;
-                    }
-                }
-            }
-
-            if (CheckHouseFlag(source, target.Owner, target.Location, target.Map))
-            {
-                return Notoriety.CanBeAttacked;
-            }
-
-            if (target.Owner is not PlayerMobile)
-            {
-                return Notoriety.CanBeAttacked;
-            }
-
-            for (var i = 0; i < list.Count; ++i)
-            {
-                if (list[i] == source)
-                {
-                    return Notoriety.CanBeAttacked;
-                }
-            }
-
-            return Notoriety.Innocent;
-        }
-
         /* Must be thread-safe */
         public static int MobileNotoriety(Mobile source, Mobile target)
         {
@@ -395,15 +129,6 @@ namespace Server.Misc
 
             var pmFrom = source as PlayerMobile;
             var pmTarg = target as PlayerMobile;
-
-            if (pmFrom != null && pmTarg != null)
-            {
-                if (pmFrom.DuelContext?.StartedBeginCountdown == true && !pmFrom.DuelContext.Finished &&
-                    pmFrom.DuelContext == pmTarg.DuelContext)
-                {
-                    return pmFrom.DuelContext.IsAlly(pmFrom, pmTarg) ? Notoriety.Ally : Notoriety.Enemy;
-                }
-            }
 
             if (target.AccessLevel > AccessLevel.Player)
             {
@@ -439,7 +164,7 @@ namespace Server.Misc
             }
 
             if (target.Kills >= 5 ||
-                target.Body.IsMonster && IsSummoned(bcTarg) && target is not BaseFamiliar && target is not ArcaneFey &&
+                target.Body.IsMonster && IsSummoned(bcTarg) && target is not BaseFamiliar &&
                 target is not Golem || bcTarg?.IsAnimatedDead == true)
             {
                 return Notoriety.Murderer;
@@ -448,30 +173,6 @@ namespace Server.Misc
             if (target.Criminal)
             {
                 return Notoriety.Criminal;
-            }
-
-            var sourceGuild = GetGuildFor(source.Guild as Guild, source);
-            var targetGuild = GetGuildFor(target.Guild as Guild, target);
-
-            if (sourceGuild != null && targetGuild != null)
-            {
-                if (sourceGuild == targetGuild || sourceGuild.IsAlly(targetGuild))
-                {
-                    return Notoriety.Ally;
-                }
-
-                if (sourceGuild.IsEnemy(targetGuild))
-                {
-                    return Notoriety.Enemy;
-                }
-            }
-
-            var srcFaction = Faction.Find(source, true, true);
-            var trgFaction = Faction.Find(target, true, true);
-
-            if (srcFaction != null && trgFaction != null && srcFaction != trgFaction && source.Map == Faction.Facet)
-            {
-                return Notoriety.Enemy;
             }
 
             if (Stealing.ClassicMode && pmTarg?.PermaFlags.Contains(source) == true)
@@ -491,8 +192,7 @@ namespace Server.Misc
 
             if (bcTarg?.InitialInnocent != true)
             {
-                if (!target.Body.IsHuman && !target.Body.IsGhost && !IsPet(bcTarg) && pmTarg == null ||
-                    !Core.ML && !target.CanBeginAction<PolymorphSpell>())
+                if (!target.Body.IsHuman && !target.Body.IsGhost && !IsPet(bcTarg) && pmTarg == null || !Core.ML)
                 {
                     return Notoriety.CanBeAttacked;
                 }
@@ -576,13 +276,6 @@ namespace Server.Misc
             }
 
             return false;
-        }
-
-        private enum GuildStatus
-        {
-            None,
-            Peaceful,
-            Waring
         }
     }
 }

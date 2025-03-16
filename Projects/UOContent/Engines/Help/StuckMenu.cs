@@ -1,6 +1,5 @@
 using System;
 using Server.Engines.Help;
-using Server.Factions;
 using Server.Gumps;
 using Server.Mobiles;
 using Server.Network;
@@ -184,11 +183,7 @@ namespace Server.Menus.Questions
         {
             StopClose();
 
-            if (Sigil.ExistsOn(m_Mobile))
-            {
-                m_Mobile.SendLocalizedMessage(1061632); // You can't do that while carrying the sigil.
-            }
-            else if (info.ButtonID == 0)
+            if (info.ButtonID == 0)
             {
                 if (m_Mobile == m_Sender)
                 {
@@ -280,12 +275,6 @@ namespace Server.Menus.Questions
                 {
                     m_Mobile.Frozen = false;
                     Stop();
-
-                    if (Sigil.ExistsOn(m_Mobile))
-                    {
-                        m_Mobile.SendLocalizedMessage(1061632); // You can't do that while carrying the sigil.
-                        return;
-                    }
 
                     var dest = m_Destination.Locations.RandomElement();
 

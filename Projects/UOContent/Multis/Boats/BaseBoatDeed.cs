@@ -1,5 +1,4 @@
 using ModernUO.Serialization;
-using Server.Engines.CannedEvil;
 using Server.Regions;
 using Server.Targeting;
 

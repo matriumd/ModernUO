@@ -1,6 +1,5 @@
 using Server.Mobiles;
 using System;
-using Server.Spells.Ninjitsu;
 
 namespace Server.Items;
 

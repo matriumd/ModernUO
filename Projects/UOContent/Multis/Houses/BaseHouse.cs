@@ -4,7 +4,6 @@ using ModernUO.CodeGeneratedEvents;
 using Server.Accounting;
 using Server.Collections;
 using Server.ContextMenus;
-using Server.Ethics;
 using Server.Guilds;
 using Server.Gumps;
 using Server.Items;

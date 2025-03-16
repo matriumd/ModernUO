@@ -1,5 +1,4 @@
 using System;
-using Server.Engines.CannedEvil;
 using Server.Items;
 using ModernUO.Serialization;
 using Server.Collections;
