@@ -914,12 +914,6 @@ public abstract class BaseAI
                 }
 
             case ActionType.Interact:
-                {
-                    m_Mobile.Warmode = false;
-                    m_Mobile.SetCurrentSpeedToPassive();
-                    break;
-                }
-
             case ActionType.Backoff:
                 {
                     m_Mobile.Warmode = false;
@@ -957,13 +951,18 @@ public abstract class BaseAI
             {
                 if (m_Mobile.Debug)
                 {
-                    m_Mobile.DebugSay("I will go to the next waypoint");
+                    m_Mobile.DebugSay("I have reached my waypoint");
                 }
 
                 m_Mobile.CurrentWayPoint = point.NextPoint;
                 if (point.NextPoint?.Deleted == true)
                 {
                     m_Mobile.CurrentWayPoint = point.NextPoint = point.NextPoint.NextPoint;
+                }
+
+                if (m_Mobile.Debug && m_Mobile.CurrentWayPoint?.Deleted == false)
+                {
+                    m_Mobile.DebugSay("I will go to my next waypoint");
                 }
             }
         }
@@ -978,12 +977,12 @@ public abstract class BaseAI
             }
             else
             {
-                WalkRandomInHome(2, 2, 1);
+                WalkRandomInHome(4, 3, 1);
             }
         }
         else if (CheckMove() && CanMoveNow(out _) && !m_Mobile.CheckIdle())
         {
-            WalkRandomInHome(2, 2, 1);
+            WalkRandomInHome(4, 3, 1);
         }
 
         if (m_Mobile.Combatant?.Deleted == false && m_Mobile.Combatant.Alive &&
