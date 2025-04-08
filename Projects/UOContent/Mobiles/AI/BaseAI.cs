@@ -1174,13 +1174,18 @@ public abstract class BaseAI
     {
         if (m_Mobile.Debug)
         {
-            m_Mobile.DebugSay("I have no order");
+            m_Mobile.DebugSay("I currently have no orders");
         }
 
-        WalkRandomInHome(3, 2, 1);
+        WalkRandomInHome(4, 3, 1);
+        UpdateWarmodeToCombatant();
 
-        if (m_Mobile.Combatant?.Deleted == false && m_Mobile.Combatant.Alive &&
-            !m_Mobile.Combatant.IsDeadBondedPet)
+        return true;
+    }
+
+    private void UpdateWarmodeToCombatant()
+    {
+        if (m_Mobile.Combatant is { Deleted: false, Alive: true, IsDeadBondedPet: false })
         {
             m_Mobile.Warmode = true;
             m_Mobile.Direction = m_Mobile.GetDirectionTo(m_Mobile.Combatant);
@@ -1189,8 +1194,6 @@ public abstract class BaseAI
         {
             m_Mobile.Warmode = false;
         }
-
-        return true;
     }
 
     public virtual bool DoOrderCome()
@@ -1200,41 +1203,29 @@ public abstract class BaseAI
             return true;
         }
 
-        var iCurrDist = (int)m_Mobile.GetDistanceToSqrt(m_Mobile.ControlMaster);
+        var currentDistance = (int)m_Mobile.GetDistanceToSqrt(m_Mobile.ControlMaster);
 
-        if (iCurrDist > m_Mobile.RangePerception)
+        if (currentDistance > m_Mobile.RangePerception)
         {
             if (m_Mobile.Debug)
             {
-                m_Mobile.DebugSay("I have lost my master. I stay here");
+                m_Mobile.DebugSay("I have lost my master. I'll stay here");
             }
 
             m_Mobile.ControlTarget = null;
             m_Mobile.ControlOrder = OrderType.None;
+            return true;
         }
-        else
+
+        if (m_Mobile.Debug)
         {
-            if (m_Mobile.Debug)
-            {
-                m_Mobile.DebugSay("My master told me come");
-            }
+            m_Mobile.DebugSay("My master told me come");
+        }
 
-            // Not exactly OSI style, but better than nothing.
-            var bRun = iCurrDist > 5;
-
-            if (WalkMobileRange(m_Mobile.ControlMaster, 1, bRun, 0, 1))
-            {
-                if (m_Mobile.Combatant?.Deleted == false && m_Mobile.Combatant.Alive &&
-                    !m_Mobile.Combatant.IsDeadBondedPet)
-                {
-                    m_Mobile.Warmode = true;
-                    // m_Mobile.Direction = m_Mobile.GetDirectionTo(m_Mobile.Combatant, bRun);
-                }
-                else
-                {
-                    m_Mobile.Warmode = false;
-                }
-            }
+        // Not exactly OSI style, but better than nothing.
+        if (WalkMobileRange(m_Mobile.ControlMaster, 1, currentDistance > 5, 0, 1))
+        {
+            UpdateWarmodeToCombatant();
         }
 
         return true;
@@ -1249,27 +1240,21 @@ public abstract class BaseAI
 
         if (m_Mobile.Debug)
         {
-            m_Mobile.DebugSay("I drop my stuff for my master");
+            m_Mobile.DebugSay("I am ordered to drop my items");
         }
 
         var pack = m_Mobile.Backpack;
 
         if (pack != null)
         {
-            var list = pack.Items;
-
-            for (var i = list.Count - 1; i >= 0; --i)
+            foreach (var item in pack.EnumerateItems(false))
             {
-                if (i < list.Count)
-                {
-                    list[i].MoveToWorld(m_Mobile.Location, m_Mobile.Map);
-                }
+                item.MoveToWorld(m_Mobile.Location, m_Mobile.Map);
             }
         }
 
         m_Mobile.ControlTarget = null;
         m_Mobile.ControlOrder = OrderType.None;
-
         return true;
     }
 
@@ -1279,33 +1264,27 @@ public abstract class BaseAI
 
         if (target == null)
         {
-            return false; // Creature is not being herded
+            return false;
         }
 
         var distance = m_Mobile.GetDistanceToSqrt(target);
 
-        if (distance is not (< 1 or > 15))
+        if (distance is >= 1 and <= 15)
         {
             DoMove(m_Mobile.GetDirectionTo(target));
             return true;
         }
 
-        if (distance < 1 && target.X == 1076 && target.Y == 450 && m_Mobile is HordeMinionFamiliar)
+        if (distance < 1 &&
+            target.X == 1076 && target.Y == 450 &&
+            m_Mobile is HordeMinionFamiliar && m_Mobile.ControlMaster is PlayerMobile { Quest: DarkTidesQuest qs })
         {
-            if (m_Mobile.ControlMaster is PlayerMobile pm)
+            var obj = qs.FindObjective<FetchAbraxusScrollObjective>();
+
+            if (obj?.Completed == false)
             {
-                var qs = pm.Quest;
-
-                if (qs is DarkTidesQuest)
-                {
-                    var obj = qs.FindObjective<FetchAbraxusScrollObjective>();
-
-                    if (obj?.Completed == false)
-                    {
-                        m_Mobile.AddToBackpack(new ScrollOfAbraxus());
-                        obj.Complete();
-                    }
-                }
+                m_Mobile.AddToBackpack(new ScrollOfAbraxus());
+                obj.Complete();
             }
         }
 
@@ -1324,54 +1303,7 @@ public abstract class BaseAI
         }
         else if (m_Mobile.ControlTarget?.Deleted == false && m_Mobile.ControlTarget != m_Mobile)
         {
-            var iCurrDist = (int)m_Mobile.GetDistanceToSqrt(m_Mobile.ControlTarget);
-
-            if (iCurrDist > m_Mobile.RangePerception)
-            {
-                if (m_Mobile.Debug)
-                {
-                    m_Mobile.DebugSay("I have lost the one to follow. I stay here");
-                }
-
-                if (m_Mobile.Combatant?.Deleted == false && m_Mobile.Combatant.Alive &&
-                    !m_Mobile.Combatant.IsDeadBondedPet)
-                {
-                    m_Mobile.Warmode = true;
-                    m_Mobile.Direction = m_Mobile.GetDirectionTo(m_Mobile.Combatant);
-                }
-                else
-                {
-                    m_Mobile.Warmode = false;
-                }
-            }
-            else
-            {
-                if (m_Mobile.Debug)
-                {
-                    m_Mobile.DebugSay($"My master told me to follow: {m_Mobile.ControlTarget.Name}");
-                }
-
-                // Not exactly OSI style, but better than nothing.
-                var bRun = iCurrDist > 5;
-
-                if (WalkMobileRange(m_Mobile.ControlTarget, 1, bRun, 0, 1))
-                {
-                    if (m_Mobile.Combatant?.Deleted == false && m_Mobile.Combatant.Alive &&
-                        !m_Mobile.Combatant.IsDeadBondedPet)
-                    {
-                        m_Mobile.Warmode = true;
-                        // m_Mobile.Direction = m_Mobile.GetDirectionTo(m_Mobile.Combatant, bRun);
-                    }
-                    else
-                    {
-                        m_Mobile.Warmode = false;
-                        if (Core.AOS)
-                        {
-                            m_Mobile.CurrentSpeed = 0.1;
-                        }
-                    }
-                }
-            }
+            HandleFollowTarget(m_Mobile.ControlTarget);
         }
         else
         {
@@ -1385,6 +1317,51 @@ public abstract class BaseAI
         }
 
         return true;
+    }
+
+    private void HandleFollowTarget(Mobile target)
+    {
+        var currentDistance = (int)m_Mobile.GetDistanceToSqrt(target);
+
+        if (currentDistance > m_Mobile.RangePerception)
+        {
+            if (m_Mobile.Debug)
+            {
+                m_Mobile.DebugSay("Target is missing. I'll stay put");
+            }
+
+            UpdateWarmodeToCombatant();
+        }
+        else
+        {
+            if (m_Mobile.Debug)
+            {
+                m_Mobile.DebugSay($"I am ordered to follow: {target.Name}");
+            }
+
+            const int minFollowDist = 2;
+            var shouldRun = currentDistance > 6;
+            var maxFollowDist = shouldRun ? 4 : 3;
+
+            if (currentDistance <= maxFollowDist + 1)
+            {
+                m_Mobile.CurrentSpeed = currentDistance <= minFollowDist ?
+                    m_Mobile.PassiveSpeed : (m_Mobile.PassiveSpeed + m_Mobile.ActiveSpeed) / 2;
+
+                m_Mobile.Direction = m_Mobile.GetDirectionTo(target);
+            }
+            else
+            {
+                // Super fast on AOS to keep up with their master
+                m_Mobile.CurrentSpeed = Core.AOS && !m_Mobile.Warmode ? 0.1 : m_Mobile.ActiveSpeed;
+
+                // TODO: Test if we should walk/run 2 steps instead of 1
+                if (WalkMobileRange(target, minFollowDist, shouldRun, minFollowDist, maxFollowDist))
+                {
+                    UpdateWarmodeToCombatant();
+                }
+            }
+        }
     }
 
     /// <summary>
