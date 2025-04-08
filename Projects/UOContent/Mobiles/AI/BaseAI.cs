@@ -141,12 +141,12 @@ public abstract class BaseAI
     {
         var name = m_Mobile.Name;
 
-        return name != null && speech.InsensitiveStartsWith(name);
+        return !string.IsNullOrEmpty(name) && speech.InsensitiveStartsWith(name);
     }
 
     public virtual void GetContextMenuEntries(Mobile from, ref PooledRefList<ContextMenuEntry> list)
     {
-        if (!from.Alive || !m_Mobile.Controlled || !from.InRange(m_Mobile, 14))
+        if (!from.Alive || !m_Mobile.Controlled || !from.InRange(m_Mobile, 16))
         {
             return;
         }
@@ -155,18 +155,16 @@ public abstract class BaseAI
 
         if (from == m_Mobile.ControlMaster)
         {
+            list.Add(new InternalEntry(6111, 14, OrderType.Attack, !isDeadPet)); // Command: Kill
+            list.Add(new InternalEntry(6108, 14, OrderType.Follow, true));       // Command: Follow
             list.Add(new InternalEntry(6107, 14, OrderType.Guard, !isDeadPet));  // Command: Guard
-            list.Add(new InternalEntry(6108, 14, OrderType.Follow, true)); // Command: Follow
+            list.Add(new InternalEntry(6112, 14, OrderType.Stop, true));         // Command: Stop
+            list.Add(new InternalEntry(6114, 14, OrderType.Stay, true));         // Command: Stay
 
             if (m_Mobile.CanDrop)
             {
                 list.Add(new InternalEntry(6109, 14, OrderType.Drop, !isDeadPet)); // Command: Drop
             }
-
-            list.Add(new InternalEntry(6111, 14, OrderType.Attack, !isDeadPet)); // Command: Kill
-
-            list.Add(new InternalEntry(6112, 14, OrderType.Stop, true)); // Command: Stop
-            list.Add(new InternalEntry(6114, 14, OrderType.Stay, true)); // Command: Stay
 
             if (!m_Mobile.Summoned && m_Mobile is not GrizzledMare)
             {
@@ -185,11 +183,12 @@ public abstract class BaseAI
         }
     }
 
-    public virtual void BeginPickTarget(Mobile from, OrderType order)
+    private bool IsValidTarget(Mobile from, OrderType order)
     {
-        if (m_Mobile.Deleted || !m_Mobile.Controlled || !from.InRange(m_Mobile, 14) || from.Map != m_Mobile.Map)
+        if (m_Mobile.Deleted || !m_Mobile.Controlled || !from.InRange(m_Mobile, 14)
+            || from.Map != m_Mobile.Map || !from.CheckAlive())
         {
-            return;
+            return false;
         }
 
         var isOwner = from == m_Mobile.ControlMaster;
@@ -197,37 +196,39 @@ public abstract class BaseAI
 
         if (!isOwner && !isFriend)
         {
-            return;
+            return false;
         }
 
-        if (isFriend && order != OrderType.Follow && order != OrderType.Stay && order != OrderType.Stop)
+        return !isFriend || order == OrderType.Follow || order == OrderType.Stay || order == OrderType.Stop;
+    }
+
+    public virtual void BeginPickTarget(Mobile from, OrderType order)
+    {
+        if (!IsValidTarget(from, order))
         {
             return;
         }
 
         if (from.Target == null)
         {
-            if (order == OrderType.Transfer)
+            var message = order switch
             {
-                from.SendLocalizedMessage(502038); // Click on the person to transfer ownership to.
-            }
-            else if (order == OrderType.Friend)
+                OrderType.Transfer => 502038,  // Click on the person to transfer ownership to.
+                OrderType.Friend   => 502020,  // Click on the player whom you wish to make a co-owner.
+                OrderType.Unfriend => 1070948, // Click on the player whom you wish to remove as a co-owner.
+                _                  => 0
+            };
+
+            if (message > 0)
             {
-                from.SendLocalizedMessage(502020); // Click on the player whom you wish to make a co-owner.
-            }
-            else if (order == OrderType.Unfriend)
-            {
-                from.SendLocalizedMessage(1070948); // Click on the player whom you wish to remove as a co-owner.
+                from.SendLocalizedMessage(message);
             }
 
             from.Target = new AIControlMobileTarget(this, order);
         }
-        else if (from.Target is AIControlMobileTarget t)
+        else if (from.Target is AIControlMobileTarget t && t.Order == order)
         {
-            if (t.Order == order)
-            {
-                t.AddAI(this);
-            }
+            t.AddAI(this);
         }
     }
 
@@ -235,8 +236,15 @@ public abstract class BaseAI
     {
         var currentCombat = m_Mobile.Combatant;
 
-        if (currentCombat != null && !aggressor.Hidden && currentCombat != aggressor &&
-            m_Mobile.GetDistanceToSqrt(currentCombat) > m_Mobile.GetDistanceToSqrt(aggressor))
+        if (currentCombat == null || currentCombat == aggressor)
+        {
+            return;
+        }
+
+        var currentDistance = m_Mobile.GetDistanceToSqrt(currentCombat);
+        var aggressorDistance = m_Mobile.GetDistanceToSqrt(aggressor);
+
+        if (currentDistance > aggressorDistance)
         {
             m_Mobile.Combatant = aggressor;
         }
@@ -244,47 +252,9 @@ public abstract class BaseAI
 
     public virtual void EndPickTarget(Mobile from, Mobile target, OrderType order)
     {
-        if (m_Mobile.Deleted || !m_Mobile.Controlled || !from.InRange(m_Mobile, 14) || from.Map != m_Mobile.Map ||
-            !from.CheckAlive())
+        if (!IsValidTarget(from, order) || order == OrderType.Attack && !CanAttackTarget(from, target))
         {
             return;
-        }
-
-        var isOwner = from == m_Mobile.ControlMaster;
-        var isFriend = !isOwner && m_Mobile.IsPetFriend(from);
-
-        if (!isOwner && !isFriend)
-        {
-            return;
-        }
-
-        if (isFriend && order != OrderType.Follow && order != OrderType.Stay && order != OrderType.Stop)
-        {
-            return;
-        }
-
-        if (order == OrderType.Attack)
-        {
-            if (target is BaseCreature creature && creature.IsScaryToPets && m_Mobile.IsScaredOfScaryThings)
-            {
-                m_Mobile.SayTo(from, "Your pet refuses to attack this creature!");
-                return;
-            }
-
-            if (SolenHelper.CheckRedFriendship(from) &&
-                target is RedSolenInfiltratorQueen or RedSolenInfiltratorWarrior or RedSolenQueen or RedSolenWarrior or RedSolenWorker
-                || SolenHelper.CheckBlackFriendship(from) &&
-                target is BlackSolenInfiltratorQueen or BlackSolenInfiltratorWarrior or BlackSolenQueen or BlackSolenWarrior or BlackSolenWorker)
-            {
-                from.SendAsciiMessage("You can not force your pet to attack a creature you are protected from.");
-                return;
-            }
-
-            if (target is BaseFactionGuard)
-            {
-                m_Mobile.SayTo(from, "Your pet refuses to attack the guard.");
-                return;
-            }
         }
 
         if (m_Mobile.CheckControlChance(from))
@@ -292,6 +262,40 @@ public abstract class BaseAI
             m_Mobile.ControlTarget = target;
             m_Mobile.ControlOrder = order;
         }
+    }
+
+    private bool CanAttackTarget(Mobile from, Mobile target)
+    {
+        if (target is BaseCreature creature && creature.IsScaryToPets && m_Mobile.IsScaredOfScaryThings)
+        {
+            // At some point the client added the cliloc, guessing 7.0.0
+            if (from.NetState?.Version > ClientVersion.Version7000)
+            {
+                from.SendLocalizedMessage(1080051); // Your pet refuses to attack this creature!
+            }
+            else
+            {
+                from.SendMessage("Your pet refuses to attack this creature!");
+            }
+            return false;
+        }
+
+        if (SolenHelper.CheckRedFriendship(from) &&
+            target is RedSolenInfiltratorQueen or RedSolenInfiltratorWarrior or RedSolenQueen or RedSolenWarrior or RedSolenWorker
+            || SolenHelper.CheckBlackFriendship(from) &&
+            target is BlackSolenInfiltratorQueen or BlackSolenInfiltratorWarrior or BlackSolenQueen or BlackSolenWarrior or BlackSolenWorker)
+        {
+            from.SendLocalizedMessage(1063106); // You can not force your pet to attack a creature you are protected from.
+            return false;
+        }
+
+        if (target is BaseFactionGuard)
+        {
+            from.SendMessage("Your pet refuses to attack the guard.");
+            return false;
+        }
+
+        return true;
     }
 
     public virtual bool HandlesOnSpeech(Mobile from)
