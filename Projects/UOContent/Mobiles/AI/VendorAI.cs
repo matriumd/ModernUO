@@ -110,15 +110,7 @@ public class VendorAI : BaseAI
         return base.DoActionGuard();
     }
 
-    public override bool HandlesOnSpeech(Mobile from)
-    {
-        if (from.InRange(m_Mobile, 4))
-        {
-            return true;
-        }
-
-        return base.HandlesOnSpeech(from);
-    }
+    public override bool HandlesOnSpeech(Mobile from) => from.InRange(m_Mobile, 4) || base.HandlesOnSpeech(from);
 
     // Temporary
     public override void OnSpeech(SpeechEventArgs e)
