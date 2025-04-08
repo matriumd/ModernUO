@@ -1008,12 +1008,11 @@ public abstract class BaseAI
 
         var combatant = m_Mobile.Combatant;
 
-        if (combatant == null || combatant.Deleted || combatant.Map != m_Mobile.Map || !combatant.Alive ||
-            combatant.IsDeadBondedPet)
+        if (!IsValidCombatant(combatant))
         {
             if (m_Mobile.Debug)
             {
-                m_Mobile.DebugSay("My combatant is gone!");
+                m_Mobile.DebugSay("My combatant is missing!");
             }
 
             Action = ActionType.Wander;
@@ -1021,33 +1020,27 @@ public abstract class BaseAI
         }
 
         m_Mobile.Direction = m_Mobile.GetDirectionTo(combatant);
-        if (m_Mobile.TriggerAbility(MonsterAbilityTrigger.CombatAction, combatant))
+        if (m_Mobile.TriggerAbility(MonsterAbilityTrigger.CombatAction, combatant) && m_Mobile.Debug)
         {
-            if (m_Mobile.Debug)
-            {
-                m_Mobile.DebugSay($"I used my abilities on {combatant.Name}!");
-            }
+            m_Mobile.DebugSay($"I used my abilities on {combatant.Name}!");
         }
 
         return true;
     }
 
+    private bool IsValidCombatant(Mobile combatant) => combatant is { Deleted: false } && combatant.Map == m_Mobile.Map &&
+                                                       combatant.Alive && !combatant.IsDeadBondedPet;
+
     public virtual bool DoActionGuard()
     {
-        if (Core.AOS && CheckHerding())
-        {
-            if (m_Mobile.Debug)
-            {
-                m_Mobile.DebugSay("Praise the shepherd!");
-            }
-        }
-        else if (Core.TickCount - m_NextStopGuard < 0)
+        if (Core.TickCount - m_NextStopGuard < 0)
         {
             if (m_Mobile.Debug)
             {
                 m_Mobile.DebugSay("I am on guard");
             }
-            // m_Mobile.Turn( Utility.Random(0, 2) - 1 );
+
+            m_Mobile.Turn( Utility.Random(0, 2) - 1 );
         }
         else
         {
@@ -1064,24 +1057,22 @@ public abstract class BaseAI
 
     public virtual bool DoActionFlee()
     {
-        var from = m_Mobile.FocusMob;
-
-        if (from?.Deleted != false || from.Map != m_Mobile.Map)
+        if (!IsValidFocusMob())
         {
             if (m_Mobile.Debug)
             {
-                m_Mobile.DebugSay("I have lost him");
+                m_Mobile.DebugSay("I lost my focus mob");
             }
 
             Action = ActionType.Guard;
             return true;
         }
 
-        if (WalkMobileRange(from, 1, true, m_Mobile.RangePerception * 2, m_Mobile.RangePerception * 3))
+        if (WalkMobileRange(m_Mobile.FocusMob, 1, true, m_Mobile.RangePerception, m_Mobile.RangePerception * 2))
         {
             if (m_Mobile.Debug)
             {
-                m_Mobile.DebugSay("I have fled");
+                m_Mobile.DebugSay("I have fled!");
             }
 
             Action = ActionType.Guard;
@@ -1095,6 +1086,8 @@ public abstract class BaseAI
 
         return true;
     }
+
+    private bool IsValidFocusMob() => m_Mobile.FocusMob is { Deleted: false } && m_Mobile.FocusMob.Map == m_Mobile.Map;
 
     public virtual bool DoActionInteract() => true;
 
@@ -1126,128 +1119,52 @@ public abstract class BaseAI
             return;
         }
 
+        m_Mobile.ControlMaster.RevealingAction();
+        m_Mobile.Combatant = null;
+        m_Mobile.PlaySound(m_Mobile.GetIdleSound());
+
         switch (m_Mobile.ControlOrder)
         {
             case OrderType.None:
+            case OrderType.Stop:
                 {
-                    m_Mobile.ControlMaster.RevealingAction();
                     m_Mobile.Home = m_Mobile.Location;
                     m_Mobile.SetCurrentSpeedToPassive();
-                    m_Mobile.PlaySound(m_Mobile.GetIdleSound());
                     m_Mobile.Warmode = false;
-                    m_Mobile.Combatant = null;
                     break;
                 }
-
             case OrderType.Come:
+            case OrderType.Follow:
+            case OrderType.Patrol:
                 {
-                    m_Mobile.ControlMaster.RevealingAction();
                     m_Mobile.SetCurrentSpeedToActive();
-                    m_Mobile.PlaySound(m_Mobile.GetIdleSound());
                     m_Mobile.Warmode = false;
-                    m_Mobile.Combatant = null;
                     break;
                 }
-
             case OrderType.Drop:
-                {
-                    m_Mobile.ControlMaster.RevealingAction();
-                    m_Mobile.SetCurrentSpeedToPassive();
-                    m_Mobile.PlaySound(m_Mobile.GetIdleSound());
-                    m_Mobile.Warmode = false;
-                    m_Mobile.Combatant = null;
-                    break;
-                }
-
             case OrderType.Friend:
             case OrderType.Unfriend:
+            case OrderType.Release:
+            case OrderType.Stay:
+            case OrderType.Transfer:
                 {
-                    m_Mobile.ControlMaster.RevealingAction();
+                    m_Mobile.SetCurrentSpeedToPassive();
+                    m_Mobile.Warmode = false;
                     break;
                 }
-
             case OrderType.Guard:
                 {
-                    m_Mobile.ControlMaster.RevealingAction();
                     m_Mobile.SetCurrentSpeedToActive();
-                    m_Mobile.PlaySound(m_Mobile.GetIdleSound());
                     m_Mobile.Warmode = true;
-                    m_Mobile.Combatant = null;
-                    m_Mobile.ControlMaster.SendLocalizedMessage(1049671, m_Mobile.Name); // ~1_PETNAME~ is now guarding you.
+                    // ~1_PETNAME~ is now guarding you.
+                    m_Mobile.ControlMaster.SendLocalizedMessage(1049671, m_Mobile.Name);
                     break;
                 }
 
             case OrderType.Attack:
                 {
-                    m_Mobile.ControlMaster.RevealingAction();
                     m_Mobile.SetCurrentSpeedToActive();
-                    m_Mobile.PlaySound(m_Mobile.GetIdleSound());
-
                     m_Mobile.Warmode = true;
-                    m_Mobile.Combatant = null;
-                    break;
-                }
-
-            case OrderType.Patrol:
-                {
-                    m_Mobile.ControlMaster.RevealingAction();
-                    m_Mobile.SetCurrentSpeedToActive();
-                    m_Mobile.PlaySound(m_Mobile.GetIdleSound());
-                    m_Mobile.Warmode = false;
-                    m_Mobile.Combatant = null;
-                    break;
-                }
-
-            case OrderType.Release:
-                {
-                    m_Mobile.ControlMaster.RevealingAction();
-                    m_Mobile.SetCurrentSpeedToPassive();
-                    m_Mobile.PlaySound(m_Mobile.GetIdleSound());
-                    m_Mobile.Warmode = false;
-                    m_Mobile.Combatant = null;
-                    break;
-                }
-
-            case OrderType.Stay:
-                {
-                    m_Mobile.ControlMaster.RevealingAction();
-                    m_Mobile.SetCurrentSpeedToPassive();
-                    m_Mobile.PlaySound(m_Mobile.GetIdleSound());
-                    m_Mobile.Warmode = false;
-                    m_Mobile.Combatant = null;
-                    break;
-                }
-
-            case OrderType.Stop:
-                {
-                    m_Mobile.ControlMaster.RevealingAction();
-                    m_Mobile.Home = m_Mobile.Location;
-                    m_Mobile.SetCurrentSpeedToPassive();
-                    m_Mobile.PlaySound(m_Mobile.GetIdleSound());
-                    m_Mobile.Warmode = false;
-                    m_Mobile.Combatant = null;
-                    break;
-                }
-
-            case OrderType.Follow:
-                {
-                    m_Mobile.ControlMaster.RevealingAction();
-                    m_Mobile.SetCurrentSpeedToActive();
-                    m_Mobile.PlaySound(m_Mobile.GetIdleSound());
-
-                    m_Mobile.Warmode = false;
-                    m_Mobile.Combatant = null;
-                    break;
-                }
-
-            case OrderType.Transfer:
-                {
-                    m_Mobile.ControlMaster.RevealingAction();
-                    m_Mobile.SetCurrentSpeedToPassive();
-                    m_Mobile.PlaySound(m_Mobile.GetIdleSound());
-
-                    m_Mobile.Warmode = false;
-                    m_Mobile.Combatant = null;
                     break;
                 }
         }
