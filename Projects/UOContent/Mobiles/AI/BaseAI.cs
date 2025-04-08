@@ -111,32 +111,13 @@ public abstract class BaseAI
         m_Mobile = m;
 
         m_Timer = new AITimer(this);
+        Action = ActionType.Wander;
 
-        bool activate;
-
-        if (!m.PlayerRangeSensitive)
-        {
-            activate = true;
-        }
-        else if (World.Loading)
-        {
-            activate = false;
-        }
-        else if (m.Map == null || m.Map == Map.Internal || !m.Map.GetSector(m.Location).Active)
-        {
-            activate = false;
-        }
-        else
-        {
-            activate = true;
-        }
-
-        if (activate)
+        if (!m.PlayerRangeSensitive || !World.Loading && m.Map != null && m.Map != Map.Internal &&
+            m.Map.GetSector(m.Location).Active)
         {
             m_Timer.Start();
         }
-
-        Action = ActionType.Wander;
     }
 
     public ActionType Action
@@ -144,8 +125,11 @@ public abstract class BaseAI
         get => m_Action;
         set
         {
-            m_Action = value;
-            OnActionChanged();
+            if (m_Action != value)
+            {
+                m_Action = value;
+                OnActionChanged();
+            }
         }
     }
 
@@ -1463,6 +1447,10 @@ public abstract class BaseAI
         return true;
     }
 
+    /// <summary>
+    /// Handles the "friend" order for the mobile, allowing the control master to add a friend to the pet.
+    /// </summary>
+    /// <returns>True if the order was successfully processed; otherwise, false.</returns>
     public virtual bool DoOrderFriend()
     {
         var from = m_Mobile.ControlMaster;
@@ -1505,25 +1493,19 @@ public abstract class BaseAI
                     }
                     else if (!m_Mobile.AllowNewPetFriend)
                     {
-                        from.SendLocalizedMessage(
-                            1005482
-                        ); // Your pet does not seem to be interested in making new friends right now.
+                        // Your pet does not seem to be interested in making new friends right now.
+                        from.SendLocalizedMessage(1005482);
                     }
                     else
                     {
                         // ~1_NAME~ will now accept movement commands from ~2_NAME~.
                         from.SendLocalizedMessage(1049676, $"{m_Mobile.Name}\t{to.Name}");
 
-                        /* ~1_NAME~ has granted you the ability to give orders to their pet ~2_PET_NAME~.
-                         * This creature will now consider you as a friend.
-                         */
+                        // ~1_NAME~ has granted you the ability to give orders to their pet ~2_PET_NAME~. This creature will now consider you as a friend.
                         to.SendLocalizedMessage(1043246, $"{from.Name}\t{m_Mobile.Name}");
-
                         m_Mobile.AddPetFriend(to);
-
                         m_Mobile.ControlTarget = to;
                         m_Mobile.ControlOrder = OrderType.Follow;
-
                         return true;
                     }
                 }
@@ -1532,7 +1514,6 @@ public abstract class BaseAI
 
         m_Mobile.ControlTarget = from;
         m_Mobile.ControlOrder = OrderType.Follow;
-
         return true;
     }
 
