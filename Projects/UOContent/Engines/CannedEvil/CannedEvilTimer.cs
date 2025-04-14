@@ -39,25 +39,25 @@ namespace Server.Engines.CannedEvil
         public static void AddSpawn(DungeonChampionSpawn spawn)
         {
             _dungeonSpawns.Add(spawn);
-            Instance?.OnSlice(_dungeonSpawns, false);
+            OnSlice(_dungeonSpawns, false);
         }
 
         public static void AddSpawn(LLChampionSpawn spawn)
         {
             _lostLandsSpawns.Add(spawn);
-            Instance?.OnSlice(_lostLandsSpawns, false);
+            OnSlice(_lostLandsSpawns, false);
         }
 
         public static void RemoveSpawn(DungeonChampionSpawn spawn)
         {
             _dungeonSpawns.Remove(spawn);
-            Instance?.OnSlice(_dungeonSpawns, false);
+            OnSlice(_dungeonSpawns, false);
         }
 
         public static void RemoveSpawn(LLChampionSpawn spawn)
         {
             _lostLandsSpawns.Remove(spawn);
-            Instance?.OnSlice(_lostLandsSpawns, false);
+            OnSlice(_lostLandsSpawns, false);
         }
 
         public CannedEvilTimer() : base(TimeSpan.Zero, TimeSpan.FromMinutes(1.0))
