@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using Server.Collections;
 using Server.Misc;
 
 namespace Server.Engines.CannedEvil
@@ -64,31 +65,33 @@ namespace Server.Engines.CannedEvil
             _sliceTime = Core.Now;
         }
 
-        public void OnSlice<T>(ICollection<T> list, bool rotate = true) where T : ChampionSpawn
+        public static void OnSlice<T>(ICollection<T> list, bool rotate = true) where T : ChampionSpawn
         {
-            if (list.Count > 0)
+            if (list.Count <= 0)
             {
-                List<T> valid = new List<T>();
+                return;
+            }
 
-                foreach (T spawn in list)
+            using var valid = PooledRefQueue<IEntity>.Create();
+
+            foreach (T spawn in list)
+            {
+                if (spawn.AlwaysActive && !spawn.Active)
                 {
-                    if (spawn.AlwaysActive && !spawn.Active)
-                    {
-                        spawn.ReadyToActivate = true;
-                    }
-                    else if (rotate && (!spawn.Active || spawn.Kills == 0 && spawn.Level == 0))
-                    {
-                        spawn.Active = false;
-                        spawn.ReadyToActivate = false;
-
-                        valid.Add(spawn);
-                    }
+                    spawn.ReadyToActivate = true;
                 }
-
-                if (valid.Count > 0)
+                else if (rotate && (!spawn.Active || spawn.Kills == 0 && spawn.Level == 0))
                 {
-                    valid[Utility.Random(valid.Count)].ReadyToActivate = true;
+                    spawn.Active = false;
+                    spawn.ReadyToActivate = false;
+
+                    valid.Enqueue(spawn);
                 }
+            }
+
+            if (valid.Count > 0 && valid.PeekRandom() is T t)
+            {
+                t.ReadyToActivate = true;
             }
         }
 
